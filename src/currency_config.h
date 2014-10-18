@@ -71,11 +71,11 @@
 
 
 #ifndef TESTNET
-#define P2P_DEFAULT_PORT                                10101
-#define RPC_DEFAULT_PORT                                10102
+#define P2P_DEFAULT_PORT                                11111
+#define RPC_DEFAULT_PORT                                11112
 #else 
-#define P2P_DEFAULT_PORT                                50101
-#define RPC_DEFAULT_PORT                                50102
+#define P2P_DEFAULT_PORT                                51111
+#define RPC_DEFAULT_PORT                                51112
 #endif
 
 #define COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT           1000
@@ -100,17 +100,6 @@
 #define P2P_IDLE_CONNECTION_KILL_INTERVAL               (5*60) //5 minutes
 
 
-/* This money will go to growth of the project */
-  #define CURRENCY_DONATIONS_ADDRESS                     "1Dmynv2xdH1WJKDh4ynWuDYrFbPRw15WDC6UDnA82SLi4zBFEVQ3fu4VT2Lc7T7WkxgnGipZAoR4LMrdyK2XiPC6JWyD2bZ"
-  #define CURRENCY_DONATIONS_ADDRESS_TRACKING_KEY        "18316c72364e65abe895f5b1e7d5d7972a323f2cb7ce0c345a2eeb56e245310b"
-/* This money will go to the founder of CryptoNote technology, 10% of donations */
-  #define CURRENCY_ROYALTY_ADDRESS                       "1BDNvkzLabRjRMFmAxJqXK7b5JFHBNuk7Q6JHrdtxsy36oUMMH8VfBEUxEfcX6aLC9eAXX2pWxTncQRW87MyFbbY7WoQahe"
-  #define CURRENCY_ROYALTY_ADDRESS_TRACKING_KEY          "53725c36758c365fa372643d68c83d80e1bf0f57189e5b52b1d1a0499e08c903"
-
-
-
-
-
 #ifdef TESTNET
   #define CURRENCY_DONATIONS_INTERVAL                     10
 #else
@@ -120,8 +109,8 @@
 
 #define ALLOW_DEBUG_COMMANDS
 
-#define CURRENCY_NAME_BASE                              "Boolberry"
-#define CURRENCY_NAME_SHORT_BASE                        "boolb"
+#define CURRENCY_NAME_BASE                              "Lui"
+#define CURRENCY_NAME_SHORT_BASE                        "lui"
 #ifndef TESTNET
 #define CURRENCY_NAME                                   CURRENCY_NAME_BASE
 #define CURRENCY_NAME_SHORT                             CURRENCY_NAME_SHORT_BASE

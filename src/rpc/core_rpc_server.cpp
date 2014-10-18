@@ -436,17 +436,12 @@ namespace currency
       LOG_PRINT_L1("COMMAND_RPC_GETBLOCKTEMPLATE: Alias requested for " << ai.m_alias << " -->>" << req.alias_details.details.address);
     }
 
-    bool donations_vote = true;
-    if (req.dev_bounties_vote.type() == typeid(bool))
-    {
-      donations_vote = boost::get<bool>(req.dev_bounties_vote);
-    }
 
     block b = AUTO_VAL_INIT(b);
     currency::blobdata blob_reserve = PROJECT_VERSION_LONG;
     blob_reserve.resize(blob_reserve.size() + 1 + req.reserve_size, 0);
     wide_difficulty_type dt = 0;
-    if (!m_core.get_block_template(b, acc, dt, res.height, blob_reserve, donations_vote, ai))
+    if (!m_core.get_block_template(b, acc, dt, res.height, blob_reserve, ai))
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
       error_resp.message = "Internal error: failed to create block template";

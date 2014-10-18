@@ -52,7 +52,6 @@ namespace currency
       size_t block_cumulative_size;
       wide_difficulty_type cumulative_difficulty;
       uint64_t already_generated_coins;
-      uint64_t already_donated_coins;
       uint64_t scratch_offset;
     };
 
@@ -93,7 +92,7 @@ namespace currency
     wide_difficulty_type get_difficulty_for_next_block();
     bool add_new_block(const block& bl_, block_verification_context& bvc);
     bool reset_and_set_genesis_block(const block& b);
-    bool create_block_template(block& b, const account_public_address& miner_address, wide_difficulty_type& di, uint64_t& height, const blobdata& ex_nonce, bool vote_for_donation, const alias_info& ai);
+    bool create_block_template(block& b, const account_public_address& miner_address, wide_difficulty_type& di, uint64_t& height, const blobdata& ex_nonce, const alias_info& ai);
     bool have_block(const crypto::hash& id);
     size_t get_total_transactions();
     bool get_outs(uint64_t amount, std::list<crypto::public_key>& pkeys);
@@ -213,9 +212,6 @@ namespace currency
     std::atomic<bool> m_is_in_checkpoint_zone;
     std::atomic<bool> m_is_blockchain_storing;
 
-    account_keys m_donations_account;
-    account_keys m_royalty_account;
-
 
     bool switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::iterator>& alt_chain);
     bool pop_block_from_blockchain();
@@ -228,7 +224,7 @@ namespace currency
     bool handle_alternative_block(const block& b, const crypto::hash& id, block_verification_context& bvc);
     wide_difficulty_type get_next_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::iterator>& alt_chain, block_extended_info& bei);
     bool prevalidate_miner_transaction(const block& b, uint64_t height);
-    bool validate_miner_transaction(const block& b, size_t cumulative_block_size, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins, uint64_t already_donated_coins, uint64_t& donation_total);
+    bool validate_miner_transaction(const block& b, size_t cumulative_block_size, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins);
     bool validate_transaction(const block& b, uint64_t height, const transaction& tx);
     bool rollback_blockchain_switching(std::list<block>& original_chain, size_t rollback_height);
     bool add_transaction_from_block(const transaction& tx, const crypto::hash& tx_id, const crypto::hash& bl_id, uint64_t bl_height);
@@ -245,15 +241,11 @@ namespace currency
     uint64_t get_adjusted_time();
     bool complete_timestamps_vector(uint64_t start_height, std::vector<uint64_t>& timestamps);
     bool update_next_comulative_size_limit();
-    bool lookfor_donation(const transaction& tx, uint64_t& donation, uint64_t& royalty);
     bool get_block_for_scratchpad_alt(uint64_t connection_height, uint64_t block_index, std::list<blockchain_storage::blocks_ext_by_hash::iterator>& alt_chain, block & b);
     bool process_blockchain_tx_extra(const transaction& tx);
     bool unprocess_blockchain_tx_extra(const transaction& tx);
     bool pop_alias_info(const alias_info& ai);
     bool put_alias_info(const alias_info& ai);
-    bool validate_donations_value(uint64_t donation, uint64_t royalty);
-    //uint64_t get_block_avr_donation_vote(const block& b);
-    bool get_required_donations_value_for_next_block(uint64_t& don_am); //applicable only for each CURRENCY_DONATIONS_INTERVAL-th block
     void fill_addr_to_alias_dict();
     bool resync_spent_tx_flags();
     bool prune_ring_signatures_if_need();

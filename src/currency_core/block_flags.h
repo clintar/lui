@@ -4,5 +4,4 @@
 
 #pragma once 
 
-#define BLOCK_FLAGS_SUPPRESS_DONATION                           0x01
 

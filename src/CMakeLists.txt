@@ -68,16 +68,16 @@ target_link_libraries(simpleminer currency_core crypto common ${CMAKE_THREAD_LIB
 
 set_property(TARGET common crypto currency_core rpc wallet PROPERTY FOLDER "libs")
 set_property(TARGET daemon simplewallet simpleminer connectivity_tool PROPERTY FOLDER "prog")
-set_property(TARGET daemon PROPERTY OUTPUT_NAME "boolbd")
+set_property(TARGET daemon PROPERTY OUTPUT_NAME "luid")
 
 if(BUILD_GUI)
   set(CMAKE_AUTOMOC ON)
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   SET(MACOSX_BUNDLE_ICON_FILE app.icns)
-  add_executable(qt-boolb WIN32 MACOSX_BUNDLE ${QTDAEMON} )	  
-  QT5_USE_MODULES(qt-boolb WebKit WebKitWidgets)
-  target_link_libraries(qt-boolb wallet rpc currency_core crypto common Qt5::Widgets ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES} )
-  set_property(TARGET qt-boolb PROPERTY FOLDER "prog")
+  add_executable(qt-luib WIN32 MACOSX_BUNDLE ${QTDAEMON} )	  
+  QT5_USE_MODULES(qt-luib WebKit WebKitWidgets)
+  target_link_libraries(qt-luib wallet rpc currency_core crypto common Qt5::Widgets ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES} )
+  set_property(TARGET qt-luib PROPERTY FOLDER "prog")
   set(CMAKE_AUTOMOC OFF)
 endif()
 

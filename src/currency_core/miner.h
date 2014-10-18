@@ -19,7 +19,7 @@ namespace currency
   struct i_miner_handler
   {
     virtual bool handle_block_found(block& b) = 0;
-    virtual bool get_block_template(block& b, const account_public_address& adr, wide_difficulty_type& diffic, uint64_t& height, const blobdata& ex_nonce, bool vote_for_donation, const alias_info& ai) = 0;
+    virtual bool get_block_template(block& b, const account_public_address& adr, wide_difficulty_type& diffic, uint64_t& height, const blobdata& ex_nonce, const alias_info& ai) = 0;
   protected:
     ~i_miner_handler(){};
   };
@@ -43,7 +43,6 @@ namespace currency
     bool is_mining();
     bool on_idle();
     void on_synchronized();
-    void set_do_donations(bool do_donations);
     //synchronous analog (for fast calls)
     void pause();
     void resume();
@@ -80,15 +79,10 @@ namespace currency
     struct miner_config
     {
       uint64_t current_extra_message_index;
-      bool donation_decision_made;
-      bool donation_decision;
       //TODO: add alias que here
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(current_extra_message_index)
-        KV_SERIALIZE(donation_decision_made)
-        KV_SERIALIZE_N(donation_decision, "donation_descision")//  misprint fix
-        KV_SERIALIZE(donation_decision)
       END_KV_SERIALIZE_MAP()
     };
 

@@ -63,7 +63,6 @@ namespace currency
   crypto::hash get_transaction_prefix_hash(const transaction_prefix& tx);
   bool parse_and_validate_tx_from_blob(const blobdata& tx_blob, transaction& tx, crypto::hash& tx_hash, crypto::hash& tx_prefix_hash);
   bool parse_and_validate_tx_from_blob(const blobdata& tx_blob, transaction& tx);  
-  bool get_donation_accounts(account_keys &donation_acc, account_keys &royalty_acc);
   bool construct_miner_tx(size_t height, size_t median_size, uint64_t already_generated_coins,
                                                              size_t current_block_size, 
                                                              uint64_t fee, 
@@ -73,16 +72,12 @@ namespace currency
                                                              size_t max_outs = 11);
 
   bool construct_miner_tx(size_t height, size_t median_size, uint64_t already_generated_coins, 
-                                                             uint64_t already_donated_coins, 
                                                              size_t current_block_size, 
                                                              uint64_t fee, 
                                                              const account_public_address &miner_address, 
-                                                             const account_public_address &donation_address, 
-                                                             const account_public_address &royalty_address, 
                                                              transaction& tx, 
                                                              const blobdata& extra_nonce = blobdata(), 
                                                              size_t max_outs = 11, 
-                                                             size_t amount_to_donate = 0, 
                                                              const alias_info& alias = alias_info()
                                                              );
   //---------------------------------------------------------------

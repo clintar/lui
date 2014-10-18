@@ -46,7 +46,6 @@ namespace boost
       }
       ar & ei.block_cumulative_size;
       ar & ei.already_generated_coins;
-      ar & ei.already_donated_coins;
       ar & ei.scratch_offset;
     }
 

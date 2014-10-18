@@ -56,22 +56,6 @@ namespace currency
     return true;
   }
   //---------------------------------------------------------------
-  bool get_donation_accounts(account_keys &donation_acc, account_keys &royalty_acc)
-  {
-    bool r = get_account_address_from_str(donation_acc.m_account_address, CURRENCY_DONATIONS_ADDRESS);
-    CHECK_AND_ASSERT_MES(r, false, "failed to get_account_address_from_str from P2P_DONATIONS_ADDRESS");
-
-    r = string_tools::parse_tpod_from_hex_string(CURRENCY_DONATIONS_ADDRESS_TRACKING_KEY, donation_acc.m_view_secret_key);
-    CHECK_AND_ASSERT_MES(r, false, "failed to parse_tpod_from_hex_string from P2P_DONATIONS_ADDRESS_TRACKING_KEY");
-
-    r = get_account_address_from_str(royalty_acc.m_account_address, CURRENCY_ROYALTY_ADDRESS);
-    CHECK_AND_ASSERT_MES(r, false, "failed to get_account_address_from_str from P2P_ROYALTY_ADDRESS");
-
-    r = string_tools::parse_tpod_from_hex_string(CURRENCY_ROYALTY_ADDRESS_TRACKING_KEY, royalty_acc.m_view_secret_key);
-    CHECK_AND_ASSERT_MES(r, false, "failed to parse_tpod_from_hex_string from P2P_ROYALTY_ADDRESS_TRACKING_KEY");
-    return true;
-  }
-  //---------------------------------------------------------------
   bool construct_miner_tx(size_t height, size_t median_size, uint64_t already_generated_coins, 
                                                              size_t current_block_size, 
                                                              uint64_t fee, 
@@ -80,34 +64,23 @@ namespace currency
                                                              const blobdata& extra_nonce, 
                                                              size_t max_outs)
   {
-    account_keys donation_acc = AUTO_VAL_INIT(donation_acc);
-    account_keys royalty_acc = AUTO_VAL_INIT(royalty_acc);
-    get_donation_accounts(donation_acc, royalty_acc);
     alias_info alias = AUTO_VAL_INIT(alias);
-    return construct_miner_tx(height, median_size, already_generated_coins, 0, 
-                                                                            current_block_size, 
+    return construct_miner_tx(height, median_size, already_generated_coins, current_block_size, 
                                                                             fee, 
                                                                             miner_address, 
-                                                                            donation_acc.m_account_address, 
-                                                                            royalty_acc.m_account_address, 
                                                                             tx, 
                                                                             extra_nonce, 
-                                                                            max_outs, 
-                                                                            0, 
+                                                                            max_outs,                                                                             
                                                                             alias);
   }
   //---------------------------------------------------------------
   bool construct_miner_tx(size_t height, size_t median_size, uint64_t already_generated_coins, 
-                                                             uint64_t already_donated_coins, 
                                                              size_t current_block_size, 
                                                              uint64_t fee, 
                                                              const account_public_address &miner_address, 
-                                                             const account_public_address &donation_address, 
-                                                             const account_public_address &royalty_address, 
                                                              transaction& tx, 
                                                              const blobdata& extra_nonce, 
                                                              size_t max_outs, 
-                                                             size_t amount_to_donate, 
                                                              const alias_info& alias)
   {
     tx.vin.clear();
@@ -129,20 +102,12 @@ namespace currency
     in.height = height;
 
     uint64_t block_reward;
-    uint64_t max_donation = 0;
-    if(!get_block_reward(median_size, current_block_size, already_generated_coins, already_donated_coins, block_reward, max_donation))
+    if(!get_block_reward(median_size, current_block_size, already_generated_coins, block_reward))
     {
       LOG_PRINT_L0("Block is too big");
       return false;
     }
     block_reward += fee;
-    uint64_t total_donation_amount = 0;//(max_donation * percents_to_donate)/100;
-    if(height && !(height%CURRENCY_DONATIONS_INTERVAL))
-      total_donation_amount = amount_to_donate;
-
-    uint64_t royalty = 0;
-    uint64_t donations = 0;
-    get_donation_parts(total_donation_amount, royalty, donations);
 
     std::vector<size_t> out_amounts;
     decompose_amount_into_digits(block_reward, DEFAULT_DUST_THRESHOLD,
@@ -167,20 +132,6 @@ namespace currency
 
     CHECK_AND_ASSERT_MES(summary_amounts == block_reward, false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal block_reward = " << block_reward);
 
-    //add donation if need
-    if(donations)
-    {
-      bool r = construct_tx_out(donation_address, txkey.sec, no, donations, tx);
-      CHECK_AND_ASSERT_MES(r, false, "Failed to contruct miner tx out");
-      ++no;
-    }
-
-    if(royalty)
-    {
-      bool r = construct_tx_out(royalty_address, txkey.sec, no, royalty, tx);
-      CHECK_AND_ASSERT_MES(r, false, "Failed to contruct miner tx out");
-      ++no;
-    }
 
     tx.version = CURRENT_TRANSACTION_VERSION;
     //lock
@@ -1000,33 +951,27 @@ namespace currency
     std::cout << std::setw(10) << std::left << "day" << std::setw(19) << "block reward" << std::setw(19) << "generated coins" << std::endl;
 
     uint64_t already_generated_coins = 0;
-    uint64_t already_donated_coins = 0;
     uint64_t emission_supply = EMISSION_SUPPLY;
     uint64_t total_money_supply = TOTAL_MONEY_SUPPLY;
     for(uint64_t day = 0; day != 365*10; ++day)
     {
       uint64_t emission_reward = 0;
-      uint64_t stub = 0;
-      get_block_reward(0, 0, already_generated_coins, 0, emission_reward, stub);
+      get_block_reward(0, 0, already_generated_coins,emission_reward);
       if(!(day%183))
       {
         std::cout << std::left 
           << std::setw(10) << day 
           << std::setw(19) << print_money(emission_reward) 
-          << std::setw(4) << std::string(std::to_string(GET_PERECENTS_BIG_NUMBERS((already_generated_coins + already_donated_coins), total_money_supply)) + "%") 
-          << print_money(already_generated_coins + already_donated_coins) 
+          << std::setw(4) << std::string(std::to_string(GET_PERECENTS_BIG_NUMBERS((already_generated_coins), total_money_supply)) + "%")  
           << std::endl;
       }
 
       
       for(size_t i = 0; i != 720; i++)
       {
-        get_block_reward(0, 0, already_generated_coins, 0, emission_reward, stub);
+        get_block_reward(0, 0, already_generated_coins, emission_reward);
         already_generated_coins += emission_reward;
       }
-      std::vector<bool> votes(CURRENCY_DONATIONS_INTERVAL, true);
-      uint64_t max_possible_donation_reward = get_donations_anount_for_day(already_donated_coins, votes);
-      already_donated_coins += max_possible_donation_reward;
     }
   }
   //------------------------------------------------------------------
@@ -1036,7 +981,7 @@ namespace currency
     
     std::cout << "Currency name: \t\t" << CURRENCY_NAME <<"(" << CURRENCY_NAME_SHORT << ")" << std::endl;
     std::cout << "Money supply: \t\t" << print_money(TOTAL_MONEY_SUPPLY) << " coins"
-                  << "(" << print_money(EMISSION_SUPPLY) << " + " << print_money(DONATIONS_SUPPLY) << "), dev bounties is " << GET_PERECENTS_BIG_NUMBERS((DONATIONS_SUPPLY+ANTI_OVERFLOW_AMOUNT), (TOTAL_MONEY_SUPPLY)) << "%" << std::endl;
+                  << "(" << print_money(EMISSION_SUPPLY) << "), dev bounties is ???" << std::endl;
 
     std::cout << "Block interval: \t" << DIFFICULTY_TARGET << " seconds" << std::endl;
     std::cout << "Default p2p port: \t" << P2P_DEFAULT_PORT << std::endl;

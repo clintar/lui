@@ -62,15 +62,6 @@ uint64_t test_generator::get_already_generated_coins(const crypto::hash& blk_id)
   return it->second.already_generated_coins;
 }
 
-uint64_t test_generator::get_already_donated_coins(const crypto::hash& blk_id) const
-{
-  auto it = m_blocks_info.find(blk_id);
-  if (it == m_blocks_info.end())
-    throw std::runtime_error("block hash wasn't found");
-
-  return it->second.already_donated;
-}
-
 currency::wide_difficulty_type test_generator::get_block_difficulty(const crypto::hash& blk_id) const
 {
   auto it = m_blocks_info.find(blk_id);
@@ -93,24 +84,20 @@ uint64_t test_generator::get_already_generated_coins(const currency::block& blk)
 
 void test_generator::add_block(const currency::block& blk, size_t tsx_size, std::vector<size_t>& block_sizes, 
                                uint64_t already_generated_coins, 
-                               uint64_t already_donated_coins, 
                                wide_difficulty_type cum_diff)
 {
   const size_t block_size = tsx_size + get_object_blobsize(blk.miner_tx);
   uint64_t block_reward;
-  uint64_t max_donation;
-  get_block_reward(misc_utils::median(block_sizes), block_size, already_generated_coins, already_donated_coins, block_reward, max_donation);
-  uint64_t donation_for_block = 0;
-  m_blocks_info[get_block_hash(blk)] = block_info(blk, already_generated_coins + block_reward, already_donated_coins + donation_for_block, block_size, cum_diff);
+  get_block_reward(misc_utils::median(block_sizes), block_size, already_generated_coins, block_reward);
+  m_blocks_info[get_block_hash(blk)] = block_info(blk, already_generated_coins + block_reward, block_size, cum_diff);
 }
 
 bool test_generator::construct_block(currency::block& blk, uint64_t height, const crypto::hash& prev_id,
-                                     const currency::account_base& miner_acc, uint64_t timestamp, uint64_t already_generated_coins, uint64_t already_donated_coins,
+                                     const currency::account_base& miner_acc, uint64_t timestamp, uint64_t already_generated_coins,
                                      std::vector<size_t>& block_sizes, const std::list<currency::transaction>& tx_list, const currency::alias_info& ai)
 {
   blk.major_version = CURRENT_BLOCK_MAJOR_VERSION;
   blk.minor_version = CURRENT_BLOCK_MINOR_VERSION;
-  blk.flags = BLOCK_FLAGS_SUPPRESS_DONATION;
   blk.timestamp = timestamp;
   blk.prev_id = prev_id;
 
@@ -133,23 +120,14 @@ bool test_generator::construct_block(currency::block& blk, uint64_t height, cons
     txs_size += get_object_blobsize(tx);
   }
 
-  account_keys donation_acc = AUTO_VAL_INIT(donation_acc);
-  account_keys royalty_acc = AUTO_VAL_INIT(royalty_acc);
-  get_donation_accounts(donation_acc, royalty_acc);
-
-
   blk.miner_tx = AUTO_VAL_INIT(blk.miner_tx);
   size_t target_block_size = txs_size + get_object_blobsize(blk.miner_tx);
   while (true)
   {
     if (!construct_miner_tx(height, misc_utils::median(block_sizes), 
-                                    already_generated_coins, 
-                                    already_donated_coins, 
                                     target_block_size, 
                                     total_fee, 
                                     miner_acc.get_keys().m_account_address, 
-                                    donation_acc.m_account_address,
-                                    royalty_acc.m_account_address,
                                     blk.miner_tx, 
                                     blobdata(), 
                                     10,
@@ -205,7 +183,7 @@ bool test_generator::construct_block(currency::block& blk, uint64_t height, cons
   while (!find_nounce(blk, blocks, a_diffic, height))
     blk.timestamp++;
 
-  add_block(blk, txs_size, block_sizes, already_generated_coins, already_donated_coins, blocks.size() ? blocks.back()->cumul_difficulty + a_diffic: a_diffic);
+  add_block(blk, txs_size, block_sizes, already_generated_coins, blocks.size() ? blocks.back()->cumul_difficulty + a_diffic: a_diffic);
 
   return true;
 }
@@ -283,11 +261,10 @@ bool test_generator::construct_block(currency::block& blk, const currency::block
   // Keep push difficulty little up to be sure about PoW hash success
   uint64_t timestamp = height > 10 ? blk_prev.timestamp + DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN: blk_prev.timestamp + DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN - DIFF_UP_TIMESTAMP_DELTA;
   uint64_t already_generated_coins = get_already_generated_coins(prev_id);
-  uint64_t already_donated_coins = get_already_donated_coins(prev_id);
   std::vector<size_t> block_sizes;
   get_last_n_block_sizes(block_sizes, prev_id, CURRENCY_REWARD_BLOCKS_WINDOW);
 
-  return construct_block(blk, height, prev_id, miner_acc, timestamp, already_generated_coins, already_donated_coins, block_sizes, tx_list, ai);
+  return construct_block(blk, height, prev_id, miner_acc, timestamp, already_generated_coins, block_sizes, tx_list, ai);
 }
 
 bool test_generator::construct_block_manually(block& blk, const block& prev_block, const account_base& miner_acc,
@@ -299,7 +276,6 @@ bool test_generator::construct_block_manually(block& blk, const block& prev_bloc
                                               size_t txs_sizes/* = 0*/)
 {
   size_t height = get_block_height(prev_block) + 1;
-  blk.flags = BLOCK_FLAGS_SUPPRESS_DONATION;
   blk.major_version = actual_params & bf_major_ver ? major_ver : CURRENT_BLOCK_MAJOR_VERSION;
   blk.minor_version = actual_params & bf_minor_ver ? minor_ver : CURRENT_BLOCK_MINOR_VERSION;
   blk.timestamp     = actual_params & bf_timestamp ? timestamp : (height > 10 ? prev_block.timestamp + DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN: prev_block.timestamp + DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN-DIFF_UP_TIMESTAMP_DELTA); // Keep difficulty unchanged
@@ -308,7 +284,6 @@ bool test_generator::construct_block_manually(block& blk, const block& prev_bloc
 
   
   uint64_t already_generated_coins = get_already_generated_coins(prev_block);
-  uint64_t already_donated_coins = get_already_donated_coins(get_block_hash(prev_block));
   std::vector<size_t> block_sizes;
   get_last_n_block_sizes(block_sizes, get_block_hash(prev_block), CURRENCY_REWARD_BLOCKS_WINDOW);
   if (actual_params & bf_miner_tx)
@@ -330,7 +305,7 @@ bool test_generator::construct_block_manually(block& blk, const block& prev_bloc
   wide_difficulty_type a_diffic = actual_params & bf_diffic ? diffic : get_difficulty_for_next_block(blocks);
   find_nounce(blk, blocks, a_diffic, height);
 
-  add_block(blk, txs_sizes, block_sizes, already_generated_coins, already_donated_coins, blocks.size() ? blocks.back()->cumul_difficulty + a_diffic: a_diffic);
+  add_block(blk, txs_sizes, block_sizes, already_generated_coins, blocks.size() ? blocks.back()->cumul_difficulty + a_diffic: a_diffic);
 
   return true;
 }
@@ -619,8 +594,7 @@ bool construct_miner_tx_manually(size_t height, uint64_t already_generated_coins
 
   // This will work, until size of constructed block is less then CURRENCY_BLOCK_GRANTED_FULL_REWARD_ZONE
   uint64_t block_reward;
-  uint64_t max_donation;
-  if (!get_block_reward(0, 0, already_generated_coins, 0, block_reward, max_donation))
+  if (!get_block_reward(0, 0, already_generated_coins, 0, block_reward))
   {
     LOG_PRINT_L0("Block is too big");
     return false;

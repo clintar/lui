@@ -34,39 +34,11 @@ namespace currency {
     return CURRENCY_MAX_TX_SIZE;
   }
   //-----------------------------------------------------------------------------------------------
-  uint64_t get_donations_anount_for_day(uint64_t already_donated_coins, const std::vector<bool>& votes)
-  {
-    CHECK_AND_ASSERT_THROW_MES(votes.size() == CURRENCY_DONATIONS_INTERVAL, "wrong flags vector size");
-
-    size_t votes_count = 0;
-    for(auto v: votes)
-      if(v) ++votes_count;
-
-    int64_t amount = 0;
-    for(size_t i = 0; i != CURRENCY_DONATIONS_INTERVAL; i++)
-    {
-      amount += (DONATIONS_SUPPLY - already_donated_coins) >> EMISSION_CURVE_CHARACTER;
-      already_donated_coins -= amount;
-    }
-    amount = (amount*votes_count)/CURRENCY_DONATIONS_INTERVAL;
-
-    amount = amount - amount%DEFAULT_DUST_THRESHOLD;
-    return amount;
-  }
-  //-----------------------------------------------------------------------------------------------
-  void get_donation_parts(uint64_t total_donations, uint64_t& royalty, uint64_t& donation)
-  {
-    royalty = total_donations/10; 
-    donation = total_donations - royalty;
-  }
-  //-----------------------------------------------------------------------------------------------
-  bool get_block_reward(size_t median_size, size_t current_block_size, uint64_t already_generated_coins, uint64_t already_donated_coins, uint64_t &reward, uint64_t& /*max_donation*/) 
+  bool get_block_reward(size_t median_size, size_t current_block_size, uint64_t already_generated_coins, uint64_t &reward) 
   {    
     uint64_t base_reward = (EMISSION_SUPPLY - already_generated_coins) >> EMISSION_CURVE_CHARACTER;
-    //max_donation = (DONATIONS_SUPPLY - already_donated_coins) >> EMISSION_CURVE_CHARACTER;
     //crop dust
     base_reward = base_reward - base_reward%DEFAULT_DUST_THRESHOLD;
-    //max_donation = max_donation - max_donation%DEFAULT_DUST_THRESHOLD;
 
 
     //make it soft
