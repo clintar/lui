@@ -127,11 +127,10 @@ namespace currency
     bool copy_scratchpad(std::string& dst);
     bool prune_aged_alt_blocks();
     bool get_transactions_daily_stat(uint64_t& daily_cnt, uint64_t& daily_volume);
-    // --- PoS ---
-    bool build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coin_age);
+    bool check_keyimages(const std::list<crypto::key_image>& images, std::list<bool>& images_stat);//true - unspent, false - spent
+    // --- PoS ---    bool build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coin_age);
     bool scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMAND_RPC_SCAN_POS::response& rsp);
     wide_difficulty_type  get_current_pos_difficulty();
-
     template<class t_ids_container, class t_blocks_container, class t_missed_container>
     bool get_blocks(const t_ids_container& block_ids, t_blocks_container& blocks, t_missed_container& missed_bs)
     {
