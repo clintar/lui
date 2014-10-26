@@ -17,7 +17,7 @@ namespace currency
 #define CORE_RPC_STATUS_OK          "OK"
 #define CORE_RPC_STATUS_BUSY        "BUSY"
 #define CORE_RPC_STATUS_NOT_FOUND   "NOT FOUND"
-#define CORE_RPC_STATUS_FAILED        "FAILED"
+#define CORE_RPC_STATUS_FAILED      "FAILED"
 
 
   struct alias_rpc_details_base
@@ -599,6 +599,38 @@ namespace currency
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
         KV_SERIALIZE(addms)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
+  struct pos_entry
+  {
+    uint64_t amount;
+    uint64_t index;
+    crypto::key_image keyimage;
+  };
+
+  struct COMMAND_RPC_SCAN_POS
+  {
+    struct request
+    {
+      std::vector<pos_entry> pos_entries;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(pos_entries)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response
+    {
+      std::string status;
+      uint64_t index;
+      uint64_t block_timestamp;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(index)
+        KV_SERIALIZE(block_timestamp)
       END_KV_SERIALIZE_MAP()
     };
   };

@@ -1171,4 +1171,39 @@ namespace currency
     return get_tx_tree_hash(txs_ids);
   }
   //---------------------------------------------------------------
+  bool is_coinstake(const block& b)
+  {
+    return is_coinstake(b.miner_tx);
+  }
+  //---------------------------------------------------------------
+  bool is_coinstake(const transaction& tx)
+  {
+    //todo
+    return false;
+  }
+  //---------------------------------------------------------------
+  bool validate_coinstake_block(const block& b)
+  {
+    
+  }
+  //------------------------------------------------------------------
+  uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age)
+  {
+    if (coin_age < POS_MIN_COINAGE)
+      return 0;
+    else if (coin_age > POS_MAX_COINAGE)
+      coin_age = POS_MAX_COINAGE;
+
+    return coin_age/(60*60*24);
+  }
+  //------------------------------------------------------------------
+  bool is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp)
+  {
+    if (source_tx_block_timestamp > last_block_timestamp)
+      return false;
+    if (last_block_timestamp - source_tx_block_timestamp < POS_MIN_COINAGE)
+      return false;
+    return true;
+  }
+
 }

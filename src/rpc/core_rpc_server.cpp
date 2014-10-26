@@ -210,6 +210,13 @@ namespace currency
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
+  bool core_rpc_server::on_scan_pos(const COMMAND_RPC_SCAN_POS::request& req, COMMAND_RPC_SCAN_POS::response& res, connection_context& cntx)
+  {
+    CHECK_CORE_READY();
+    m_core.get_blockchain_storage().
+    res.status = CORE_RPC_STATUS_OK;
+    return true;
+  }
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_get_transactions(const COMMAND_RPC_GET_TRANSACTIONS::request& req, COMMAND_RPC_GET_TRANSACTIONS::response& res, connection_context& cntx)
   {

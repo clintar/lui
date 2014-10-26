@@ -68,6 +68,7 @@ namespace tools
     struct transfer_details
     {
       uint64_t m_block_height;
+      uint64_t m_block_timestamp;
       currency::transaction m_tx;
       size_t m_internal_output_index;
       uint64_t m_global_output_index;
@@ -165,6 +166,10 @@ namespace tools
 
     }
     static uint64_t select_indices_for_transfer(std::list<size_t>& ind, std::map<uint64_t, std::list<size_t> >& found_free_amounts, uint64_t needed_money);
+
+    //PoS
+    bool try_mint_pos();
+
   private:
     bool store_keys(const std::string& keys_file_name, const std::string& password);
     void load_keys(const std::string& keys_file_name, const std::string& password);
@@ -195,6 +200,7 @@ namespace tools
     epee::net_utils::http::http_simple_client m_http_client;
     std::vector<crypto::hash> m_blockchain;
     std::atomic<uint64_t> m_local_bc_height; //temporary workaround 
+    std::atomic<uint64_t> m_last_bc_timestamp; 
     std::unordered_map<crypto::hash, unconfirmed_transfer_details> m_unconfirmed_txs;
 
     transfer_container m_transfers;
@@ -225,6 +231,7 @@ namespace boost
     inline void serialize(Archive &a, tools::wallet2::transfer_details &x, const boost::serialization::version_type ver)
     {
       a & x.m_block_height;
+      a & x.m_block_timestamp;
       a & x.m_global_output_index;
       a & x.m_internal_output_index;
       a & x.m_tx;

@@ -99,6 +99,12 @@
 #define P2P_IP_FAILS_BEFOR_BLOCK                        10
 #define P2P_IDLE_CONNECTION_KILL_INTERVAL               (5*60) //5 minutes
 
+//PoS definitions
+#define POS_SCAN_WINDOW                                 (60*4) // 4 minutes
+#define POS_MIN_COINAGE                                 (60*60*24*30) // 30 days
+#define POS_MAX_COINAGE                                 (60*60*24*90) // 90 days
+
+
 
 #ifdef TESTNET
   #define CURRENCY_DONATIONS_INTERVAL                     10

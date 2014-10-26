@@ -142,6 +142,13 @@ namespace currency
   bool get_payment_id_from_tx_extra(const transaction& tx, std::string& payment_id);
   crypto::hash get_blob_longhash(const blobdata& bd, uint64_t height, const std::vector<crypto::hash>& scratchpad);
   crypto::hash get_blob_longhash_opt(const blobdata& bd, const std::vector<crypto::hash>& scratchpad);
+  
+  
+  //PoS
+  bool is_coinstake(const block& b);
+  bool is_coinstake(const transaction& tx);
+  uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age);
+  uint64_t is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp);
 
   void print_currency_details();
     

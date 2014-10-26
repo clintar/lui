@@ -2232,3 +2232,73 @@ bool blockchain_storage::add_new_block(const block& bl_, block_verification_cont
 
   return handle_block_to_main_chain(bl, id, bvc);
 }
+//------------------------------------------------------------------
+bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coin_age)
+{
+  coin_age = 0;
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+  if (!is_coinstake(tx))
+  {
+    LOG_ERROR("transaction is not coinstake in build_kernel()");
+    return false;
+  }
+  kernel = AUTO_VAL_INIT(kernel);
+  kernel.tx_out_global_index = global_index;
+  kernel.kimage = ki;
+
+  //get block related with coinstake source transaction
+  auto it = m_outputs.find(amount);
+  CHECK_AND_ASSERT_MES(it != m_outputs.end(), false, "Failed to find amount in coin stake " << amount);
+
+  CHECK_AND_ASSERT_MES(it->second.size() > kernel.tx_out_global_index, false, "wrong key offset " << kernel.tx_out_global_index << " with amount kernel_in.amount");
+  
+  auto tx_it = m_transactions.find(it->second[kernel.tx_out_global_index].first);
+  CHECK_AND_ASSERT_MES(tx_it != m_transactions.end(), false, "internal error: transaction " << it->second[kernel_in.key_offsets[0]].first  << " reffered in index not found");
+  CHECK_AND_ASSERT_MES(m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp >= m_blocks.back().bl.timestamp, false, "wrong coin age");
+
+  coin_age = m_blocks.back().bl.timestamp - m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp;
+  kernel.tx_block_timestamp = m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp;
+
+  //todo:
+  //kernel.stake_modifier = ???  
+  return true;
+}
+//------------------------------------------------------------------
+bool blockchain_storage::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMAND_RPC_SCAN_POS::response& rsp)
+{
+  uint64_t timstamp_start = 0;
+  CRITICAL_REGION_BEGIN(m_blockchain_lock);
+  timstamp_start = m_blocks.back().bl.timestamp
+  CRITICAL_REGION_END();
+
+  for (size_t i = 0; i != sp.pos_entries.size(); i++)
+  {
+    
+    for (uint64_t ts = timstamp_start; ts++; ts < timstamp_start + POS_SCAN_WINDOW)
+    {
+      stake_kernel sk = AUTO_VAL_INIT(sk);
+      uint64_t coin_age = 0;
+      build_kernel(sp.pos_entries[i].amount, sp.pos_entries[i].index, sp.pos_entries[i].keyimage, sk, coin_age);
+      crypto::hash kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
+      uint64_t coindays_weight = get_coinday_weight(sp.pos_entries[i].amount, coin_age);
+      wide_difficulty_type this_coin_diff = get_current_pos_difficulty() / coindays_weight;
+      if (!check_hash(kernel_hash, this_coin_diff))
+        continue;
+      else
+      {
+        //found kernel
+        LOG_PRINT_GREEN("Found kernel: amount=" << sp.pos_entries[i].amount << ", index=" << sp.pos_entries[i].index << ", key_image" << sp.pos_entries[i].keyimage);
+        rsp.index = i;
+        rsp.block_timestamp = ts;
+        rsp.status = CORE_RPC_STATUS_OK;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+//------------------------------------------------------------------
+wide_difficulty_type blockchain_storage::get_current_pos_difficulty()
+{
+
+}

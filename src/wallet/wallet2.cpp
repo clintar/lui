@@ -25,7 +25,6 @@ using namespace currency;
 namespace tools
 {
 //----------------------------------------------------------------------------------------------------
-
 void fill_transfer_details(const currency::transaction& tx, const tools::money_transfer2_details& td, tools::wallet_rpc::wallet_transfer_info_details& res_td)
 {
   for (auto si : td.spent_indices)
@@ -40,8 +39,7 @@ void fill_transfer_details(const currency::transaction& tx, const tools::money_t
     res_td.rcv.push_back(tx.vout[ri].amount);
   }
 }
-
-
+//----------------------------------------------------------------------------------------------------
 void wallet2::init(const std::string& daemon_address)
 {
   m_upper_transaction_size_limit = 0;
@@ -88,6 +86,7 @@ void wallet2::process_new_transaction(const currency::transaction& tx, uint64_t 
       m_transfers.push_back(boost::value_initialized<transfer_details>());
       transfer_details& td = m_transfers.back();
       td.m_block_height = height;
+      td.m_block_timestamp = b.timestamp;
       td.m_internal_output_index = o;
       td.m_global_output_index = res.o_indexes[o];
       td.m_tx = tx;
@@ -243,6 +242,7 @@ void wallet2::process_new_blockchain_entry(const currency::block& b, currency::b
   }
   m_blockchain.push_back(bl_id);
   ++m_local_bc_height;
+  m_last_bc_timestamp = b.timestamp;
 
   if (0 != m_callback)
     m_callback->on_new_block(height, b);
@@ -702,6 +702,26 @@ void wallet2::get_recent_transfers_history(std::vector<wallet_rpc::wallet_transf
 bool wallet2::get_transfer_address(const std::string& adr_str, currency::account_public_address& addr)
 {
   return tools::get_transfer_address(adr_str, addr, m_http_client, m_daemon_address);
+}
+//----------------------------------------------------------------------------------------------------
+bool wallet2::try_mint_pos()
+{
+  COMMAND_RPC_SCAN_POS::request req = AUTO_VAL_INIT(req);
+  COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
+
+  for (auto& tr : m_transfers)
+  {
+    if (!is_coin_age_okay(tr.m_block_timestamp, m_last_bc_timestamp))
+      continue;
+    currency::pos_entry pe = AUTO_VAL_INIT(pe);
+    pe.amount = tr.amount;
+    pe.index = tr.m_global_output_index;
+    pe.keyimage = tr.m_key_image;
+    req.pos_entries.push_back(pe);
+  }
+  m_c
+
+  return true;
 }
 //----------------------------------------------------------------------------------------------------
 void wallet2::wallet_transfer_info_from_unconfirmed_transfer_details(const unconfirmed_transfer_details& u, wallet_rpc::wallet_transfer_info& wti)
