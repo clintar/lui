@@ -649,16 +649,20 @@ namespace currency
     };
   };
 
-
-
-
-
-
   struct pos_entry
   {
     uint64_t amount;
     uint64_t index;
     crypto::key_image keyimage;
+    //not for serialization
+    uint64_t wallet_index;
+
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(amount)
+      KV_SERIALIZE(index)
+      KV_SERIALIZE(keyimage)
+    END_KV_SERIALIZE_MAP()
+
   };
 
   struct COMMAND_RPC_SCAN_POS

@@ -54,6 +54,7 @@ namespace currency
   struct tx_extra_info 
   {
     crypto::public_key m_tx_pub_key;
+    size_t tx_pub_key;
     alias_info m_alias;
     std::string m_user_data_blob;
   };

@@ -4,4 +4,4 @@
 
 #pragma once 
 
-
+#define CURRENCY_BLOCK_FLAG_POS_BLOCK    0x01

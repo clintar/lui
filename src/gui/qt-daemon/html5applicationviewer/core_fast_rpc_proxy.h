@@ -89,6 +89,11 @@ namespace tools
       return m_rpc.on_getblocktemplate(req, rsp, m_err_stub, m_cntxt_stub);
     }
     //------------------------------------------------------------------------------------------------------------------------------
+    bool call_COMMAND_RPC_SUBMITBLOCK(const currency::COMMAND_RPC_SUBMITBLOCK::request& req, currency::COMMAND_RPC_SUBMITBLOCK::response& rsp)
+    {
+      return m_rpc.on_submitblock(req, rsp, m_err_stub, m_cntxt_stub);
+    }
+    //------------------------------------------------------------------------------------------------------------------------------
     bool get_transfer_address(const std::string& adr_str, currency::account_public_address& addr)
     {
       return tools::get_transfer_address(adr_str, addr, this);

@@ -71,7 +71,12 @@ namespace tools
   {
     return epee::net_utils::invoke_http_json_rpc("/json_rpc", "getblocktemplate", req, rsp, m_http_client);
   }
-
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool default_http_core_proxy::call_COMMAND_RPC_SUBMITBLOCK(const currency::COMMAND_RPC_SUBMITBLOCK::request& req, currency::COMMAND_RPC_SUBMITBLOCK::response& rsp)
+  {
+    return epee::net_utils::invoke_http_json_rpc("/json_rpc", "submitblock", req, rsp, m_http_client);
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
   bool default_http_core_proxy::check_connection()
   {
     if (m_http_client.is_connected())

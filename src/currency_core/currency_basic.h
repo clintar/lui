@@ -243,11 +243,16 @@ namespace currency
   {
     transaction miner_tx;
     std::vector<crypto::hash> tx_hashes;
+    crypto::signature pos_sig;
 
     BEGIN_SERIALIZE_OBJECT()
       FIELDS(*static_cast<block_header *>(this))
       FIELD(miner_tx)
       FIELD(tx_hashes)
+    if (m_flags&CURRENCY_BLOCK_FLAG_POS_BLOCK)
+    {
+      FIELD(pos_sig)
+    }
     END_SERIALIZE()
   };
 
