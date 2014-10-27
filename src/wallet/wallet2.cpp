@@ -709,8 +709,8 @@ bool wallet2::get_transfer_address(const std::string& adr_str, currency::account
 //----------------------------------------------------------------------------------------------------
 bool wallet2::try_mint_pos()
 {
-  COMMAND_RPC_SCAN_POS::request req = AUTO_VAL_INIT(req);
-  COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
+  currency::COMMAND_RPC_SCAN_POS::request req = AUTO_VAL_INIT(req);
+  currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
 
   for (auto& tr : m_transfers)
   {
@@ -722,8 +722,35 @@ bool wallet2::try_mint_pos()
     pe.keyimage = tr.m_key_image;
     req.pos_entries.push_back(pe);
   }
-  m_c
+  m_core_proxy->call_COMMAND_RPC_SCAN_POS(req, rsp);
+  if (rsp.status == CORE_RPC_STATUS_OK)
+  {
+    //found a block, construct it, sign and push to daemon
+    LOG_PRINT_GREEN("Found kernel, constructing block", LOG_LEVEL_1);
 
+    CHECK_AND_NO_ASSERT_MES(rsp.index < req.pos_entries.size(), false, "call_COMMAND_RPC_SCAN_POS returned wrong index: " << rsp.index << ", expected less then " << pos_entries.size());
+
+    currency::COMMAND_RPC_GETBLOCKTEMPLATE::request tmpl_req = AUTO_VAL_INIT(tmpl_req);
+    currency::COMMAND_RPC_GETBLOCKTEMPLATE::response tmpl_rsp = AUTO_VAL_INIT(tmpl_rsp);
+    tmpl_req.wallet_address = m_account.get_public_address_str();
+    tmpl_req.pos_block = true;
+    tmpl_req.pos_amount = req.pos_entries[rsp.index].amount;
+    tmpl_req.pos_index = req.pos_entries[rsp.index].index;
+    m_core_proxy->call_COMMAND_RPC_GETBLOCKTEMPLATE(tmpl_req, tmpl_rsp);
+
+    CHECK_AND_ASSERT_MES(tmpl_rsp.status == CORE_RPC_STATUS_OK, false, "Failed to create block template after kernel hash found!");
+    currency::block b = AUTO_VAL_INIT(b);
+    currency::blobdata block_blob;
+    bool res = epee::string_tools::parse_hexstr_to_binbuff(tmpl_rsp.blocktemplate_blob, block_blob);
+    CHECK_AND_ASSERT_MES(res, false, "Failed to create block template after kernel hash found!");
+    res = parse_and_validate_block_from_blob(block_blob, b);
+    CHECK_AND_ASSERT_MES(res, false, "Failed to create block template after kernel hash found!");
+
+    //generate coinbse trnsaction
+
+
+    //crypto::generate_signature()
+  }
   return true;
 }
 //----------------------------------------------------------------------------------------------------

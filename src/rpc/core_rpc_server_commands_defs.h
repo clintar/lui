@@ -408,14 +408,18 @@ namespace currency
     {
       uint64_t reserve_size;       //max 255 bytes
       std::string wallet_address;
+      bool pos_block;              //is pos block 
+      uint64_t pos_amount;         //
+      uint64_t pos_index;          //
       alias_rpc_details alias_details;
-      epee::serialization::storage_entry dev_bounties_vote;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(reserve_size)
         KV_SERIALIZE(alias_details)
-        KV_SERIALIZE(wallet_address)        
-        KV_SERIALIZE(dev_bounties_vote)
+        KV_SERIALIZE(wallet_address)   
+        KV_SERIALIZE(pos_block)
+        KV_SERIALIZE(pos_amount)
+        KV_SERIALIZE(pos_index)
       END_KV_SERIALIZE_MAP()
     };
 

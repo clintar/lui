@@ -62,6 +62,16 @@ namespace tools
     return epee::net_utils::invoke_http_bin_remote_command2(m_daemon_address + "/check_keyimages.bin", req, rsp, m_http_client, WALLET_RCP_CONNECTION_TIMEOUT);
   }
   //------------------------------------------------------------------------------------------------------------------------------
+  bool default_http_core_proxy::call_COMMAND_RPC_SCAN_POS(const currency::COMMAND_RPC_SCAN_POS::request& req, currency::COMMAND_RPC_SCAN_POS::response& rsp)
+  {
+    return epee::net_utils::invoke_http_bin_remote_command2(m_daemon_address + "/scan_pos.bin", req, rsp, m_http_client, WALLET_RCP_CONNECTION_TIMEOUT);
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool default_http_core_proxy::call_COMMAND_RPC_GETBLOCKTEMPLATE(const currency::COMMAND_RPC_GETBLOCKTEMPLATE::request& req, currency::COMMAND_RPC_GETBLOCKTEMPLATE::response& rsp)
+  {
+    return epee::net_utils::invoke_http_json_rpc("/json_rpc", "getblocktemplate", req, rsp, m_http_client);
+  }
+
   bool default_http_core_proxy::check_connection()
   {
     if (m_http_client.is_connected())

@@ -2306,6 +2306,7 @@ bool blockchain_storage::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMA
       }
     }
   }
+  rsp.status = CORE_RPC_STATUS_NOT_FOUND;
   return false;
 }
 //------------------------------------------------------------------
