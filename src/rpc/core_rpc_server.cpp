@@ -82,7 +82,8 @@ namespace currency
     }
 
     res.height = m_core.get_current_blockchain_height();
-    res.difficulty = m_core.get_blockchain_storage().get_difficulty_for_next_block().convert_to<uint64_t>();
+    res.pos_difficulty = m_core.get_blockchain_storage().get_difficulty_for_next_pos_block().convert_to<uint64_t>();
+    res.pow_difficulty = m_core.get_blockchain_storage().get_difficulty_for_next_pow_block().convert_to<uint64_t>();
     res.tx_count = m_core.get_blockchain_storage().get_total_transactions() - res.height; //without coinbase
     res.tx_pool_size = m_core.get_pool_transactions_count();
     res.alt_blocks_count = m_core.get_blockchain_storage().get_alternative_blocks_count();
@@ -763,7 +764,6 @@ namespace currency
     COMMAND_RPC_GETBLOCKTEMPLATE::response bt_res = AUTO_VAL_INIT(bt_res);
 
     //bt_req.alias_details  - set alias here
-    bt_req.dev_bounties_vote = epee::serialization::storage_entry(true); //set vote 
     bt_req.reserve_size = 0; //if you want to put some data into extra
     // !!!!!!!! SET YOUR WALLET ADDRESS HERE  !!!!!!!!
     bt_req.wallet_address = "1HNJjUsofq5LYLoXem119dd491yFAb5g4bCHkecV4sPqigmuxw57Ci9am71fEN4CRmA9jgnvo5PDNfaq8QnprWmS5uLqnbq";

@@ -244,15 +244,15 @@ namespace currency
     transaction miner_tx;
     std::vector<crypto::hash> tx_hashes;
     crypto::signature pos_sig;
-
+    
     BEGIN_SERIALIZE_OBJECT()
       FIELDS(*static_cast<block_header *>(this))
       FIELD(miner_tx)
       FIELD(tx_hashes)
-    if (m_flags&CURRENCY_BLOCK_FLAG_POS_BLOCK)
-    {
-      FIELD(pos_sig)
-    }
+      if (this->flags&CURRENCY_BLOCK_FLAG_POS_BLOCK)
+      {
+        FIELD(pos_sig)
+      }
     END_SERIALIZE()
   };
 
@@ -303,6 +303,20 @@ namespace currency
   };
 #pragma pack(pop)
 
+  struct pos_entry
+  {
+    uint64_t amount;
+    uint64_t index;
+    crypto::key_image keyimage;
+    //not for serialization
+    uint64_t wallet_index;
+
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(amount)
+      KV_SERIALIZE(index)
+      KV_SERIALIZE_VAL_POD_AS_BLOB_FORCE(keyimage)
+    END_KV_SERIALIZE_MAP()
+  };
 }
 
 BLOB_SERIALIZER(currency::txout_to_key);

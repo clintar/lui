@@ -106,7 +106,7 @@ bool blockchain_storage::init(const std::string& config_folder)
     timestamp_diff = time(NULL) - 1341378000;
 
   fill_addr_to_alias_dict();
-  LOG_PRINT_GREEN("Blockchain initialized. last block: " << m_blocks.size()-1 << ", " << misc_utils::get_time_interval_string(timestamp_diff) <<  " time ago, current difficulty: " << get_difficulty_for_next_block(), LOG_LEVEL_0);
+  LOG_PRINT_GREEN("Blockchain initialized. last block: " << m_blocks.size() - 1 << ", " << misc_utils::get_time_interval_string(timestamp_diff) << " time ago, current pos difficulty: " << get_difficulty_for_next_pos_block() << ", current pow difficulty: " << get_difficulty_for_next_pow_block(), LOG_LEVEL_0);
   return true;
 }
 //------------------------------------------------------------------
@@ -454,7 +454,23 @@ void blockchain_storage::get_all_known_block_ids(std::list<crypto::hash> &main, 
     invalid.push_back(v.first);
 }
 //------------------------------------------------------------------
-wide_difficulty_type blockchain_storage::get_difficulty_for_next_block()
+wide_difficulty_type blockchain_storage::get_difficulty_for_next_pow_block()
+{
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+  std::vector<uint64_t> timestamps;
+  std::vector<wide_difficulty_type> commulative_difficulties;
+  size_t offset = m_blocks.size() - std::min(m_blocks.size(), static_cast<size_t>(DIFFICULTY_BLOCKS_COUNT));
+  if (!offset)
+    ++offset;//skip genesis block
+  for (; offset < m_blocks.size(); offset++)
+  {
+    timestamps.push_back(m_blocks[offset].bl.timestamp);
+    commulative_difficulties.push_back(m_blocks[offset].cumulative_difficulty);
+  }
+  return next_difficulty(timestamps, commulative_difficulties);
+}
+//------------------------------------------------------------------
+wide_difficulty_type blockchain_storage::get_difficulty_for_next_pos_block()
 {
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   std::vector<uint64_t> timestamps;
@@ -686,7 +702,24 @@ uint64_t blockchain_storage::get_current_comulative_blocksize_limit()
   return m_current_block_cumul_sz_limit;
 }
 //------------------------------------------------------------------
-bool blockchain_storage::create_block_template(block& b, const account_public_address& miner_address, wide_difficulty_type& diffic, uint64_t& height, const blobdata& ex_nonce, const alias_info& ai)
+bool blockchain_storage::create_block_template(block& b, 
+                                               const account_public_address& miner_address, 
+                                               wide_difficulty_type& diffic, 
+                                               uint64_t& height, 
+                                               const blobdata& ex_nonce, 
+                                               const alias_info& ai)
+{
+  return create_block_template(b, miner_address, diffic, height, ex_nonce, ai, false, pos_entry());
+}
+//------------------------------------------------------------------
+bool blockchain_storage::create_block_template(block& b, 
+                                               const account_public_address& miner_address, 
+                                               wide_difficulty_type& diffic, 
+                                               uint64_t& height, 
+                                               const blobdata& ex_nonce, 
+                                               const alias_info& ai, 
+                                               bool pos, 
+                                               const pos_entry& pe)
 {
   size_t median_size;
   uint64_t already_generated_coins;
@@ -697,9 +730,20 @@ bool blockchain_storage::create_block_template(block& b, const account_public_ad
   b.prev_id = get_top_block_id();
   b.timestamp = time(NULL);
   b.flags = 0;
-  height = m_blocks.size();
-  diffic = get_difficulty_for_next_block();
+  if (pos)
+  {
+    diffic = get_difficulty_for_next_pos_block();
+    b.flags |= CURRENCY_BLOCK_FLAG_POS_BLOCK;
+  }
+  else
+  {
+    diffic = get_difficulty_for_next_pow_block();
+  }
+
   CHECK_AND_ASSERT_MES(diffic, false, "difficulty owverhead.");
+
+
+  height = m_blocks.size();
 
   median_size = m_current_block_cumul_sz_limit / 2;
   already_generated_coins = m_blocks.back().already_generated_coins;
@@ -721,7 +765,10 @@ bool blockchain_storage::create_block_template(block& b, const account_public_ad
                                                    fee, 
                                                    miner_address, 
                                                    b.miner_tx, ex_nonce, 
-                                                   11,  ai);
+                                                   11, 
+                                                   ai, 
+                                                   pos,
+                                                   pe);
   CHECK_AND_ASSERT_MES(r, false, "Failed to construc miner tx, first chance");
 #ifdef _DEBUG
   std::list<size_t> try_val;
@@ -2039,7 +2086,7 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
 
   //check proof of work
   TIME_MEASURE_START(target_calculating_time);
-  wide_difficulty_type current_diffic = get_difficulty_for_next_block();
+  wide_difficulty_type current_diffic = is_pos_block(bl) ? get_difficulty_for_next_pos_block() : get_difficulty_for_next_pow_block();
   CHECK_AND_ASSERT_MES(current_diffic, false, "!!!!!!!!! difficulty overhead !!!!!!!!!");
   TIME_MEASURE_FINISH(target_calculating_time);
   TIME_MEASURE_START(longhash_calculating_time);
@@ -2248,12 +2295,7 @@ bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, co
 {
   coin_age = 0;
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
-  if (!is_coinstake(tx))
-  {
-    LOG_ERROR("transaction is not coinstake in build_kernel()");
-    return false;
-  }
-  kernel = AUTO_VAL_INIT(kernel);
+  kernel = stake_kernel();
   kernel.tx_out_global_index = global_index;
   kernel.kimage = ki;
 
@@ -2264,7 +2306,7 @@ bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, co
   CHECK_AND_ASSERT_MES(it->second.size() > kernel.tx_out_global_index, false, "wrong key offset " << kernel.tx_out_global_index << " with amount kernel_in.amount");
   
   auto tx_it = m_transactions.find(it->second[kernel.tx_out_global_index].first);
-  CHECK_AND_ASSERT_MES(tx_it != m_transactions.end(), false, "internal error: transaction " << it->second[kernel_in.key_offsets[0]].first  << " reffered in index not found");
+  CHECK_AND_ASSERT_MES(tx_it != m_transactions.end(), false, "internal error: transaction " << it->second[kernel.tx_out_global_index].first << " reffered in index not found");
   CHECK_AND_ASSERT_MES(m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp >= m_blocks.back().bl.timestamp, false, "wrong coin age");
 
   coin_age = m_blocks.back().bl.timestamp - m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp;
@@ -2278,27 +2320,29 @@ bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, co
 bool blockchain_storage::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMAND_RPC_SCAN_POS::response& rsp)
 {
   uint64_t timstamp_start = 0;
+  wide_difficulty_type basic_diff = 0;
   CRITICAL_REGION_BEGIN(m_blockchain_lock);
-  timstamp_start = m_blocks.back().bl.timestamp
+  timstamp_start = m_blocks.back().bl.timestamp;
+  basic_diff = get_difficulty_for_next_pos_block();
   CRITICAL_REGION_END();
 
   for (size_t i = 0; i != sp.pos_entries.size(); i++)
   {
     
-    for (uint64_t ts = timstamp_start; ts++; ts < timstamp_start + POS_SCAN_WINDOW)
+    for (uint64_t ts = timstamp_start; ts < timstamp_start + POS_SCAN_WINDOW; ts++)
     {
       stake_kernel sk = AUTO_VAL_INIT(sk);
       uint64_t coin_age = 0;
       build_kernel(sp.pos_entries[i].amount, sp.pos_entries[i].index, sp.pos_entries[i].keyimage, sk, coin_age);
       crypto::hash kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
       uint64_t coindays_weight = get_coinday_weight(sp.pos_entries[i].amount, coin_age);
-      wide_difficulty_type this_coin_diff = get_current_pos_difficulty() / coindays_weight;
+      wide_difficulty_type this_coin_diff = basic_diff / coindays_weight;
       if (!check_hash(kernel_hash, this_coin_diff))
         continue;
       else
       {
         //found kernel
-        LOG_PRINT_GREEN("Found kernel: amount=" << sp.pos_entries[i].amount << ", index=" << sp.pos_entries[i].index << ", key_image" << sp.pos_entries[i].keyimage);
+        LOG_PRINT_GREEN("Found kernel: amount=" << sp.pos_entries[i].amount << ", index=" << sp.pos_entries[i].index << ", key_image" << sp.pos_entries[i].keyimage, LOG_LEVEL_0);
         rsp.index = i;
         rsp.block_timestamp = ts;
         rsp.status = CORE_RPC_STATUS_OK;
@@ -2308,9 +2352,4 @@ bool blockchain_storage::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMA
   }
   rsp.status = CORE_RPC_STATUS_NOT_FOUND;
   return false;
-}
-//------------------------------------------------------------------
-wide_difficulty_type blockchain_storage::get_current_pos_difficulty()
-{
-
 }

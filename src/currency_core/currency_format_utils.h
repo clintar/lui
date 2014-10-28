@@ -79,8 +79,9 @@ namespace currency
                                                              transaction& tx, 
                                                              const blobdata& extra_nonce = blobdata(), 
                                                              size_t max_outs = 11, 
-                                                             const alias_info& alias = alias_info()
-                                                             );
+                                                             const alias_info& alias = alias_info(),
+                                                             bool pos = false,
+                                                             const pos_entry& pe = pos_entry());
   //---------------------------------------------------------------
   bool construct_tx_out(const account_public_address& destination_addr, const crypto::secret_key& tx_sec_key, size_t output_index, uint64_t amount, transaction& tx, uint8_t tx_outs_attr = CURRENCY_TO_KEY_OUT_RELAXED);
   bool validate_alias_name(const std::string& al);
@@ -146,10 +147,10 @@ namespace currency
   
   
   //PoS
-  bool is_coinstake(const block& b);
-  bool is_coinstake(const transaction& tx);
+  bool is_pos_block(const block& b);
+  bool is_pos_block(const transaction& tx);
   uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age);
-  uint64_t is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp);
+  bool is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp);
 
   void print_currency_details();
     

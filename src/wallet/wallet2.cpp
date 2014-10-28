@@ -711,7 +711,6 @@ bool wallet2::try_mint_pos()
 {
   currency::COMMAND_RPC_SCAN_POS::request req = AUTO_VAL_INIT(req);
   currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
-
   
   for (size_t i = 0; i != m_transfers.size(); i++)
   {
@@ -721,10 +720,10 @@ bool wallet2::try_mint_pos()
     if (!is_coin_age_okay(tr.m_block_timestamp, m_last_bc_timestamp))
       continue;
     currency::pos_entry pe = AUTO_VAL_INIT(pe);
-    pe.amount = tr.amount;
+    pe.amount = tr.amount();
     pe.index = tr.m_global_output_index;
     pe.keyimage = tr.m_key_image;
-    tr.wallet_index = i;
+    pe.wallet_index = i;
     req.pos_entries.push_back(pe);
   }
   m_core_proxy->call_COMMAND_RPC_SCAN_POS(req, rsp);
@@ -733,7 +732,7 @@ bool wallet2::try_mint_pos()
     //found a block, construct it, sign and push to daemon
     LOG_PRINT_GREEN("Found kernel, constructing block", LOG_LEVEL_1);
 
-    CHECK_AND_NO_ASSERT_MES(rsp.index < req.pos_entries.size(), false, "call_COMMAND_RPC_SCAN_POS returned wrong index: " << rsp.index << ", expected less then " << pos_entries.size());
+    CHECK_AND_NO_ASSERT_MES(rsp.index < req.pos_entries.size(), false, "call_COMMAND_RPC_SCAN_POS returned wrong index: " << rsp.index << ", expected less then " << req.pos_entries.size());
 
     currency::COMMAND_RPC_GETBLOCKTEMPLATE::request tmpl_req = AUTO_VAL_INIT(tmpl_req);
     currency::COMMAND_RPC_GETBLOCKTEMPLATE::response tmpl_rsp = AUTO_VAL_INIT(tmpl_rsp);

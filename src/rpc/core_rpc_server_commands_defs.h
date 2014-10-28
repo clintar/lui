@@ -309,7 +309,8 @@ namespace currency
     {
       std::string status;
       uint64_t height;
-      uint64_t difficulty;
+      uint64_t pos_difficulty;
+      uint64_t pow_difficulty;
       uint64_t tx_count;
       uint64_t tx_pool_size;
       uint64_t alt_blocks_count;
@@ -332,7 +333,8 @@ namespace currency
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
         KV_SERIALIZE(height)
-        KV_SERIALIZE(difficulty)
+        KV_SERIALIZE(pos_difficulty)
+        KV_SERIALIZE(pow_difficulty)
         KV_SERIALIZE(tx_count)
         KV_SERIALIZE(tx_pool_size)
         KV_SERIALIZE(alt_blocks_count)
@@ -649,22 +651,6 @@ namespace currency
     };
   };
 
-  struct pos_entry
-  {
-    uint64_t amount;
-    uint64_t index;
-    crypto::key_image keyimage;
-    //not for serialization
-    uint64_t wallet_index;
-
-    BEGIN_KV_SERIALIZE_MAP()
-      KV_SERIALIZE(amount)
-      KV_SERIALIZE(index)
-      KV_SERIALIZE(keyimage)
-    END_KV_SERIALIZE_MAP()
-
-  };
-
   struct COMMAND_RPC_SCAN_POS
   {
     struct request
@@ -689,7 +675,5 @@ namespace currency
       END_KV_SERIALIZE_MAP()
     };
   };
-
-}
 }
 

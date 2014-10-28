@@ -64,6 +64,7 @@ namespace currency
                                                              const blobdata& extra_nonce, 
                                                              size_t max_outs)
   {
+
     alias_info alias = AUTO_VAL_INIT(alias);
     return construct_miner_tx(height, median_size, already_generated_coins, current_block_size, 
                                                                             fee, 
@@ -71,7 +72,9 @@ namespace currency
                                                                             tx, 
                                                                             extra_nonce, 
                                                                             max_outs,                                                                             
-                                                                            alias);
+                                                                            alias, 
+                                                                            false, 
+                                                                            pos_entry());
   }
   //---------------------------------------------------------------
   bool construct_miner_tx(size_t height, size_t median_size, uint64_t already_generated_coins, 
@@ -81,7 +84,9 @@ namespace currency
                                                              transaction& tx, 
                                                              const blobdata& extra_nonce, 
                                                              size_t max_outs, 
-                                                             const alias_info& alias)
+                                                             const alias_info& alias, 
+                                                             bool pos,
+                                                             const pos_entry& pe)
   {
     tx.vin.clear();
     tx.vout.clear();
@@ -98,8 +103,22 @@ namespace currency
         return false;
     }
 
-    txin_gen in;
-    in.height = height;
+    if (!pos)
+    {
+      txin_gen in;
+      in.height = height;
+      tx.vin.push_back(in);
+    }
+    else
+    {
+      txin_to_key in;
+      in.amount = pe.amount;
+      in.key_offsets.push_back(pe.index);
+      in.k_image = pe.keyimage;
+      tx.vin.push_back(in);
+      //reserve place for ring signature
+      tx.signatures.resize(1);
+    }
 
     uint64_t block_reward;
     if(!get_block_reward(median_size, current_block_size, already_generated_coins, block_reward))
@@ -136,7 +155,6 @@ namespace currency
     tx.version = CURRENT_TRANSACTION_VERSION;
     //lock
     tx.unlock_time = height + CURRENCY_MINED_MONEY_UNLOCK_WINDOW;
-    tx.vin.push_back(in);
     return true;
   }
   //---------------------------------------------------------------
@@ -1171,20 +1189,24 @@ namespace currency
     return get_tx_tree_hash(txs_ids);
   }
   //---------------------------------------------------------------
-  bool is_coinstake(const block& b)
+  bool is_pos_block(const block& b)
   {
-    return is_coinstake(b.miner_tx);
+    if (!b.flags&CURRENCY_BLOCK_FLAG_POS_BLOCK)
+      return false;
+    return is_pos_block(b.miner_tx);
   }
   //---------------------------------------------------------------
-  bool is_coinstake(const transaction& tx)
+  bool is_pos_block(const transaction& tx)
   {
-    //todo
+    if (tx.vin.size() == 1 && tx.vin[0].type() == typeid(txin_to_key))
+      return true;
     return false;
   }
   //---------------------------------------------------------------
   bool validate_coinstake_block(const block& b)
   {
-    
+    //TODO
+    return false;
   }
   //------------------------------------------------------------------
   uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age)
