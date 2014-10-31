@@ -174,6 +174,28 @@ namespace currency
       }
       return true;
     }
+
+    template<typename callback_t>
+    bool get_next_diff_conditional(callback_t cb)
+    {
+        CRITICAL_REGION_LOCAL(m_blockchain_lock);
+        std::vector<uint64_t> timestamps;
+        std::vector<wide_difficulty_type> commulative_difficulties;
+        size_t count = 0;
+        if (!m_blocks.size())
+          return DIFFICULTY_STARTER;
+        //skip genesis timestamp
+        auto stop_it = --m_blocks.rend();
+        for (auto rit = m_blocks.rbegin(); rit != stop_it; it++)
+        {
+          if(!cb(*rit))
+            continue;
+          timestamps.push_back(rit->bl.timestamp);
+          commulative_difficulties.push_back(rit->cumulative_difficulty);
+        }
+        return next_difficulty(timestamps, commulative_difficulties);
+    }
+
     //debug functions
     void print_blockchain(uint64_t start_index, uint64_t end_index);
     void print_blockchain_index();
@@ -227,7 +249,8 @@ namespace currency
     bool handle_block_to_main_chain(const block& bl, block_verification_context& bvc);
     bool handle_block_to_main_chain(const block& bl, const crypto::hash& id, block_verification_context& bvc);
     bool handle_alternative_block(const block& b, const crypto::hash& id, block_verification_context& bvc);
-    wide_difficulty_type get_next_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::iterator>& alt_chain, block_extended_info& bei);
+    wide_difficulty_type get_next_pos_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::iterator>& alt_chain, block_extended_info& bei);
+    wide_difficulty_type get_next_pow_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::iterator>& alt_chain, block_extended_info& bei);
     bool prevalidate_miner_transaction(const block& b, uint64_t height);
     bool validate_miner_transaction(const block& b, size_t cumulative_block_size, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins);
     bool validate_transaction(const block& b, uint64_t height, const transaction& tx);

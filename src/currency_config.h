@@ -45,7 +45,7 @@
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
-
+#define DIFFICULTY_STARTER                              1
 #define DIFFICULTY_TARGET                               120 // seconds
 #define DIFFICULTY_WINDOW                               720 // blocks
 #define DIFFICULTY_LAG                                  15  // !!!

@@ -114,7 +114,7 @@ namespace currency {
     size_t length = timestamps.size();
     assert(length == cumulative_difficulties.size());
     if (length <= 1) {
-      return 1;
+      return DIFFICULTY_STARTER;
     }
     static_assert(DIFFICULTY_WINDOW >= 2, "Window is too small");
     assert(length <= DIFFICULTY_WINDOW);
@@ -155,7 +155,7 @@ namespace currency {
     size_t length = timestamps.size();
     assert(length == cumulative_difficulties.size());
     if (length <= 1) {
-      return 1;
+      return DIFFICULTY_STARTER;
     }
     static_assert(DIFFICULTY_WINDOW >= 2, "Window is too small");
     assert(length <= DIFFICULTY_WINDOW);
@@ -178,7 +178,7 @@ namespace currency {
     assert(total_work > 0);
     boost::multiprecision::uint256_t res =  (boost::multiprecision::uint256_t(total_work) * target_seconds + time_span - 1) / time_span;
     if(res > max128bit)
-	return 0; // to behave like previuos implementation, may be better return max128bit?
+	    return 0; // to behave like previuos implementation, may be better return max128bit?
     return res.convert_to<wide_difficulty_type>();
   }
 

@@ -797,8 +797,8 @@ bool wallet2::try_mint_pos()
 
     //sign block
     crypto::generate_signature(get_block_hash(b),
-                               m_account.get_keys().m_account_address.m_spend_public_key, 
-                               m_account.get_keys().m_spend_secret_key, 
+                               txtokey.key, 
+                               derived_secrete_ephemeral_key,
                                b.pos_sig);
 
     LOG_PRINT_GREEN("Block constructed, sending to core...", LOG_LEVEL_1);
