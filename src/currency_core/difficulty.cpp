@@ -182,13 +182,14 @@ namespace currency {
     return res.convert_to<wide_difficulty_type>();
   }
 
-  difficulty_type next_difficulty_old(vector<uint64_t> timestamps, vector<difficulty_type> cumulative_difficulties)
+/*  difficulty_type next_difficulty_old(vector<uint64_t> timestamps, vector<difficulty_type> cumulative_difficulties)
   {
     return next_difficulty_old(std::move(timestamps), std::move(cumulative_difficulties), DIFFICULTY_TARGET);
   }
-
-  wide_difficulty_type next_difficulty(vector<uint64_t> timestamps, vector<wide_difficulty_type> cumulative_difficulties)
+*/
+/*  wide_difficulty_type next_difficulty(vector<uint64_t> timestamps, vector<wide_difficulty_type> cumulative_difficulties)
   {
     return next_difficulty(std::move(timestamps), std::move(cumulative_difficulties), DIFFICULTY_TARGET);
   }
+*/
 }

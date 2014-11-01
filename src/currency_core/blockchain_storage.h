@@ -25,6 +25,7 @@
 #include "verification_context.h"
 #include "crypto/hash.h"
 #include "checkpoints.h"
+#include "pos_config.h"
 
 POD_MAKE_HASHABLE(currency, account_public_address);
 
@@ -131,8 +132,14 @@ namespace currency
     bool get_transactions_daily_stat(uint64_t& daily_cnt, uint64_t& daily_volume);
     bool check_keyimages(const std::list<crypto::key_image>& images, std::list<bool>& images_stat);//true - unspent, false - spent
     // --- PoS ---    
-    bool build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coin_age);
+    bool build_kernel(const block& bl, stake_kernel& kernel, uint64_t& coindays_weight);
+    bool build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coindays_weight);
     bool scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMAND_RPC_SCAN_POS::response& rsp);
+    bool validate_pos_block(const block& b);
+    uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age);
+    bool is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp);
+
+
     template<class t_ids_container, class t_blocks_container, class t_missed_container>
     bool get_blocks(const t_ids_container& block_ids, t_blocks_container& blocks, t_missed_container& missed_bs)
     {
@@ -176,7 +183,7 @@ namespace currency
     }
 
     template<typename callback_t>
-    bool get_next_diff_conditional(callback_t cb)
+    bool get_next_diff_conditional(callback_t cb, size_t target_econds)
     {
         CRITICAL_REGION_LOCAL(m_blockchain_lock);
         std::vector<uint64_t> timestamps;
@@ -193,7 +200,7 @@ namespace currency
           timestamps.push_back(rit->bl.timestamp);
           commulative_difficulties.push_back(rit->cumulative_difficulty);
         }
-        return next_difficulty(timestamps, commulative_difficulties);
+        return next_difficulty(timestamps, commulative_difficulties, target_econds);
     }
 
     //debug functions
@@ -238,6 +245,9 @@ namespace currency
     checkpoints m_checkpoints;
     std::atomic<bool> m_is_in_checkpoint_zone;
     std::atomic<bool> m_is_blockchain_storing;
+
+    //pos
+    pos_config m_pos_config;
 
 
     bool switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::iterator>& alt_chain);

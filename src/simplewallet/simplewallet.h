@@ -85,7 +85,7 @@ namespace currency
       void update(uint64_t height, bool force = false)
       {
         auto current_time = std::chrono::system_clock::now();
-        if (std::chrono::seconds(DIFFICULTY_TARGET / 2) < current_time - m_blockchain_height_update_time || m_blockchain_height <= height)
+        if (std::chrono::seconds(DIFFICULTY_TOTAL_TARGET / 2) < current_time - m_blockchain_height_update_time || m_blockchain_height <= height)
         {
           update_blockchain_height();
           m_blockchain_height = (std::max)(m_blockchain_height, height);

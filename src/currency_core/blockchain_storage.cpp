@@ -35,7 +35,8 @@ blockchain_storage::blockchain_storage(tx_memory_pool& tx_pool):m_tx_pool(tx_poo
                                                                 m_current_block_cumul_sz_limit(0), 
                                                                 m_is_in_checkpoint_zone(false), 
                                                                 m_is_blockchain_storing(false), 
-                                                                m_current_pruned_rs_height(0)
+                                                                m_current_pruned_rs_height(0), 
+                                                                m_pos_config(get_default_pos_config())
 {}
 //------------------------------------------------------------------
 bool blockchain_storage::have_tx(const crypto::hash &id)
@@ -461,7 +462,7 @@ wide_difficulty_type blockchain_storage::get_difficulty_for_next_pow_block()
       return false;
     else
       return true;
-  });
+  }, DIFFICULTY_POW_TARGET);
 }
 //------------------------------------------------------------------
 wide_difficulty_type blockchain_storage::get_difficulty_for_next_pos_block()
@@ -471,7 +472,7 @@ wide_difficulty_type blockchain_storage::get_difficulty_for_next_pos_block()
       return true;
     else
       return false;
-  });
+  }, DIFFICULTY_POS_TARGET);
 }
 //------------------------------------------------------------------
 bool blockchain_storage::rollback_blockchain_switching(std::list<block>& original_chain, size_t rollback_height)
@@ -2096,6 +2097,30 @@ bool blockchain_storage::prune_aged_alt_blocks()
   return true;
 }
 //------------------------------------------------------------------
+bool check_pos_block(const block& b)
+{
+  return false;
+}
+//------------------------------------------------------------------
+bool blockchain_storage::validate_pos_block(const block& b)
+{
+  bool is_pos = is_pos_block(b);
+  CHECK_AND_ASSERT_MES(is_pos, false, "is_pos_block() returned false validate_pos_block()");
+
+  //validate 
+  wide_difficulty_type basic_diff = get_difficulty_for_next_pos_block();
+  stake_kernel sk = AUTO_VAL_INIT(sk);
+  uint64_t coindays_weight = 0;
+  bool r = build_kernel(b, sk, coindays_weight);
+  CHECK_AND_ASSERT_MES(r, false, "failed to build kernel_stake");
+  crypto::hash kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
+  wide_difficulty_type this_coin_diff = basic_diff / coindays_weight;
+  if (!check_hash(kernel_hash, this_coin_diff))
+    return false;
+  
+  return true;
+}
+//------------------------------------------------------------------
 bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypto::hash& id, block_verification_context& bvc)
 {
   TIME_MEASURE_START(block_processing_time);
@@ -2118,27 +2143,36 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
     return false;
   }
 
-  //check proof of work
-  TIME_MEASURE_START(target_calculating_time);
-  wide_difficulty_type current_diffic = is_pos_block(bl) ? get_difficulty_for_next_pos_block() : get_difficulty_for_next_pow_block();
-  CHECK_AND_ASSERT_MES(current_diffic, false, "!!!!!!!!! difficulty overhead !!!!!!!!!");
-  TIME_MEASURE_FINISH(target_calculating_time);
-  TIME_MEASURE_START(longhash_calculating_time);
-  crypto::hash proof_of_work = null_hash;
-  
-  proof_of_work = get_block_longhash(bl, m_blocks.size(), [&](uint64_t index) -> crypto::hash&
+  if (is_pos_block(bl))
   {
-    return m_scratchpad[index%m_scratchpad.size()];
-  });
-
-  if(!check_hash(proof_of_work, current_diffic))
-  {
-    LOG_PRINT_L0("Block with id: " << id << ENDL
-      << "have not enough proof of work: " << proof_of_work << ENDL
-      << "nexpected difficulty: " << current_diffic );
-    bvc.m_verifivation_failed = true;
-    return false;
+    bool r = validate_pos_block(bl);
+    CHECK_AND_ASSERT_MES(r, false, "validate_pos_block failed!!");
   }
+  else
+  {
+    //check proof of work
+    TIME_MEASURE_START(target_calculating_time);
+    wide_difficulty_type current_diffic = is_pos_block(bl) ? get_difficulty_for_next_pos_block() : get_difficulty_for_next_pow_block();
+    CHECK_AND_ASSERT_MES(current_diffic, false, "!!!!!!!!! difficulty overhead !!!!!!!!!");
+    TIME_MEASURE_FINISH(target_calculating_time);
+    TIME_MEASURE_START(longhash_calculating_time);
+    crypto::hash proof_of_work = null_hash;
+
+    proof_of_work = get_block_longhash(bl, m_blocks.size(), [&](uint64_t index) -> crypto::hash&
+    {
+      return m_scratchpad[index%m_scratchpad.size()];
+    });
+
+    if (!check_hash(proof_of_work, current_diffic))
+    {
+      LOG_PRINT_L0("Block with id: " << id << ENDL
+        << "have not enough proof of work: " << proof_of_work << ENDL
+        << "nexpected difficulty: " << current_diffic);
+      bvc.m_verifivation_failed = true;
+      return false;
+    }
+  }
+ 
 
   if(m_checkpoints.is_in_checkpoint_zone(get_current_blockchain_height()))
   {
@@ -2325,9 +2359,20 @@ bool blockchain_storage::add_new_block(const block& bl_, block_verification_cont
   return handle_block_to_main_chain(bl, id, bvc);
 }
 //------------------------------------------------------------------
-bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coin_age)
+bool blockchain_storage::build_kernel(const block& bl, stake_kernel& kernel, uint64_t& coindays_weight)
 {
-  coin_age = 0;
+  CHECK_AND_ASSERT_MES(bl.miner_tx.vin.size(), false, "wrong miner transaction");
+  CHECK_AND_ASSERT_MES(bl.miner_tx.vin[0].type() == typeid(txin_to_key), false, "wrong miner transaction");
+
+  const txin_to_key& txin = boost::get<txin_to_key>(bl.miner_tx.vin[0]);
+  CHECK_AND_ASSERT_MES(txin.key_offsets.size(), false, "wrong miner transaction");
+  kernel.tx_block_timestamp = bl.timestamp;
+  return build_kernel(txin.amount, txin.key_offsets[0], txin.k_image, kernel, coindays_weight);
+}
+//------------------------------------------------------------------
+bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coindays_weight)
+{
+  coindays_weight = 0;
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   kernel = stake_kernel();
   kernel.tx_out_global_index = global_index;
@@ -2343,8 +2388,10 @@ bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, co
   CHECK_AND_ASSERT_MES(tx_it != m_transactions.end(), false, "internal error: transaction " << it->second[kernel.tx_out_global_index].first << " reffered in index not found");
   CHECK_AND_ASSERT_MES(m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp >= m_blocks.back().bl.timestamp, false, "wrong coin age");
 
-  coin_age = m_blocks.back().bl.timestamp - m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp;
+  uint64_t coin_age = m_blocks.back().bl.timestamp - m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp;
   kernel.tx_block_timestamp = m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp;
+
+  coindays_weight = get_coinday_weight(amount, coin_age);
 
   //todo:
   //kernel.stake_modifier = ???  
@@ -2366,10 +2413,9 @@ bool blockchain_storage::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMA
     for (uint64_t ts = timstamp_start; ts < timstamp_start + POS_SCAN_WINDOW; ts++)
     {
       stake_kernel sk = AUTO_VAL_INIT(sk);
-      uint64_t coin_age = 0;
-      build_kernel(sp.pos_entries[i].amount, sp.pos_entries[i].index, sp.pos_entries[i].keyimage, sk, coin_age);
+      uint64_t coindays_weight = 0;
+      build_kernel(sp.pos_entries[i].amount, sp.pos_entries[i].index, sp.pos_entries[i].keyimage, sk, coindays_weight);
       crypto::hash kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
-      uint64_t coindays_weight = get_coinday_weight(sp.pos_entries[i].amount, coin_age);
       wide_difficulty_type this_coin_diff = basic_diff / coindays_weight;
       if (!check_hash(kernel_hash, this_coin_diff))
         continue;
@@ -2386,4 +2432,23 @@ bool blockchain_storage::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMA
   }
   rsp.status = CORE_RPC_STATUS_NOT_FOUND;
   return false;
+}
+//------------------------------------------------------------------
+uint64_t blockchain_storage::get_coinday_weight(uint64_t amount, uint64_t coin_age)
+{
+  if (coin_age < m_pos_config.min_coinage)
+    return 0;
+  else if (coin_age > m_pos_config.max_coinage)
+    coin_age = m_pos_config.max_coinage;
+
+  return coin_age / (60 * 60 * 24);
+}
+//------------------------------------------------------------------
+bool blockchain_storage::is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp)
+{
+  if (source_tx_block_timestamp > last_block_timestamp)
+    return false;
+  if (last_block_timestamp - source_tx_block_timestamp < m_pos_config.min_coinage)
+    return false;
+  return true;
 }

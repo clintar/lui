@@ -1001,7 +1001,8 @@ namespace currency
     std::cout << "Money supply: \t\t" << print_money(TOTAL_MONEY_SUPPLY) << " coins"
                   << "(" << print_money(EMISSION_SUPPLY) << "), dev bounties is ???" << std::endl;
 
-    std::cout << "Block interval: \t" << DIFFICULTY_TARGET << " seconds" << std::endl;
+    std::cout << "PoS block interval: \t" << DIFFICULTY_POS_TARGET << " seconds" << std::endl;
+    std::cout << "PoW block interval: \t" << DIFFICULTY_POW_TARGET << " seconds" << std::endl;
     std::cout << "Default p2p port: \t" << P2P_DEFAULT_PORT << std::endl;
     std::cout << "Default rpc port: \t" << RPC_DEFAULT_PORT << std::endl;
     print_reward_halwing();
@@ -1202,30 +1203,4 @@ namespace currency
       return true;
     return false;
   }
-  //---------------------------------------------------------------
-  bool validate_coinstake_block(const block& b)
-  {
-    //TODO
-    return false;
-  }
-  //------------------------------------------------------------------
-  uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age)
-  {
-    if (coin_age < POS_MIN_COINAGE)
-      return 0;
-    else if (coin_age > POS_MAX_COINAGE)
-      coin_age = POS_MAX_COINAGE;
-
-    return coin_age/(60*60*24);
-  }
-  //------------------------------------------------------------------
-  bool is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp)
-  {
-    if (source_tx_block_timestamp > last_block_timestamp)
-      return false;
-    if (last_block_timestamp - source_tx_block_timestamp < POS_MIN_COINAGE)
-      return false;
-    return true;
-  }
-
 }
