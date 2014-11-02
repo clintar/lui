@@ -90,8 +90,6 @@ namespace currency
     crypto::hash get_top_block_id();
     crypto::hash get_top_block_id(uint64_t& height);
     bool get_top_block(block& b);
-    wide_difficulty_type get_difficulty_for_next_pow_block();
-    wide_difficulty_type get_difficulty_for_next_pos_block();
     wide_difficulty_type get_next_diff_conditional(bool pos);
  
     bool add_new_block(const block& bl_, block_verification_context& bvc);

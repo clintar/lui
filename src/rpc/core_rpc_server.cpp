@@ -82,8 +82,8 @@ namespace currency
     }
 
     res.height = m_core.get_current_blockchain_height();
-    res.pos_difficulty = m_core.get_blockchain_storage().get_difficulty_for_next_pos_block().convert_to<uint64_t>();
-    res.pow_difficulty = m_core.get_blockchain_storage().get_difficulty_for_next_pow_block().convert_to<uint64_t>();
+    res.pos_difficulty = m_core.get_blockchain_storage().get_next_diff_conditional(true).convert_to<uint64_t>();
+    res.pow_difficulty = m_core.get_blockchain_storage().get_next_diff_conditional(false).convert_to<uint64_t>();
     res.tx_count = m_core.get_blockchain_storage().get_total_transactions() - res.height; //without coinbase
     res.tx_pool_size = m_core.get_pool_transactions_count();
     res.alt_blocks_count = m_core.get_blockchain_storage().get_alternative_blocks_count();

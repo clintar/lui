@@ -150,7 +150,6 @@ namespace currency
   bool is_pos_block(const block& b);
   bool is_pos_block(const transaction& tx);
   uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age);
-  bool is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp);
 
   void print_currency_details();
     

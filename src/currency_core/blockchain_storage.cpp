@@ -107,7 +107,7 @@ bool blockchain_storage::init(const std::string& config_folder)
     timestamp_diff = time(NULL) - 1341378000;
 
   fill_addr_to_alias_dict();
-  LOG_PRINT_GREEN("Blockchain initialized. last block: " << m_blocks.size() - 1 << ", " << misc_utils::get_time_interval_string(timestamp_diff) << " time ago, current pos difficulty: " << get_difficulty_for_next_pos_block() << ", current pow difficulty: " << get_difficulty_for_next_pow_block(), LOG_LEVEL_0);
+  LOG_PRINT_GREEN("Blockchain initialized. last block: " << m_blocks.size() - 1 << ", " << misc_utils::get_time_interval_string(timestamp_diff) << " time ago, current pos difficulty: " << get_next_diff_conditional(true) << ", current pow difficulty: " << get_next_diff_conditional(false), LOG_LEVEL_0);
   return true;
 }
 //------------------------------------------------------------------
@@ -701,14 +701,9 @@ bool blockchain_storage::create_block_template(block& b,
   b.timestamp = time(NULL);
   b.flags = 0;
   if (pos)
-  {
-    diffic = get_difficulty_for_next_pos_block();
     b.flags |= CURRENCY_BLOCK_FLAG_POS_BLOCK;
-  }
-  else
-  {
-    diffic = get_difficulty_for_next_pow_block();
-  }
+
+  diffic = get_next_diff_conditional(pos);
 
   CHECK_AND_ASSERT_MES(diffic, false, "difficulty owverhead.");
 
@@ -2053,7 +2048,7 @@ bool check_pos_block(const block& b)
 bool blockchain_storage::validate_pos_block(const block& b)
 {
   //validate 
-  wide_difficulty_type basic_diff = get_difficulty_for_next_pos_block();
+  wide_difficulty_type basic_diff = get_next_diff_conditional(true);
   return validate_pos_block(b, basic_diff);
 }
 //------------------------------------------------------------------
@@ -2377,7 +2372,7 @@ bool blockchain_storage::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMA
   wide_difficulty_type basic_diff = 0;
   CRITICAL_REGION_BEGIN(m_blockchain_lock);
   timstamp_start = m_blocks.back().bl.timestamp;
-  basic_diff = get_difficulty_for_next_pos_block();
+  basic_diff = get_next_diff_conditional(true);
   CRITICAL_REGION_END();
 
   for (size_t i = 0; i != sp.pos_entries.size(); i++)
