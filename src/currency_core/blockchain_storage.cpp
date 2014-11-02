@@ -453,27 +453,7 @@ void blockchain_storage::get_all_known_block_ids(std::list<crypto::hash> &main, 
 
   BOOST_FOREACH(blocks_ext_by_hash::value_type &v, m_invalid_blocks)
     invalid.push_back(v.first);
-}
-//------------------------------------------------------------------
-wide_difficulty_type blockchain_storage::get_difficulty_for_next_pow_block()
-{
-  return get_next_diff_conditional([](const block_extended_info& bei){
-    if (is_pos_block(bei.bl))
-      return false;
-    else
-      return true;
-  }, DIFFICULTY_POW_TARGET);
-}
-//------------------------------------------------------------------
-wide_difficulty_type blockchain_storage::get_difficulty_for_next_pos_block()
-{
-  return get_next_diff_conditional([](const block_extended_info& bei){
-    if (is_pos_block(bei.bl))
-      return true;
-    else
-      return false;
-  }, DIFFICULTY_POS_TARGET);
-}
+} 
 //------------------------------------------------------------------
 bool blockchain_storage::rollback_blockchain_switching(std::list<block>& original_chain, size_t rollback_height)
 {
@@ -561,95 +541,50 @@ bool blockchain_storage::switch_to_alternative_blockchain(std::list<blocks_ext_b
   return true;
 }
 //------------------------------------------------------------------
-wide_difficulty_type blockchain_storage::get_next_pos_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::iterator>& alt_chain, block_extended_info& bei)
+wide_difficulty_type blockchain_storage::get_next_diff_conditional(bool pos)
 {
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
   std::vector<uint64_t> timestamps;
   std::vector<wide_difficulty_type> commulative_difficulties;
-  if(alt_chain.size()< DIFFICULTY_BLOCKS_COUNT)
+  size_t count = 0;
+  if (!m_blocks.size())
+    return DIFFICULTY_STARTER;
+  //skip genesis timestamp
+  auto stop_it = --m_blocks.rend();
+  for (auto rit = m_blocks.rbegin(); rit != stop_it; rit++)
   {
-    CRITICAL_REGION_LOCAL(m_blockchain_lock);
-    size_t main_chain_stop_offset = alt_chain.size() ? alt_chain.front()->second.height : bei.height;
-    size_t main_chain_count = DIFFICULTY_BLOCKS_COUNT - std::min(static_cast<size_t>(DIFFICULTY_BLOCKS_COUNT), alt_chain.size());
-    main_chain_count = std::min(main_chain_count, main_chain_stop_offset);
-    size_t main_chain_start_offset = main_chain_stop_offset - main_chain_count;
-
-    if(!main_chain_start_offset)
-      ++main_chain_start_offset; //skip genesis block
-    for(; main_chain_start_offset < main_chain_stop_offset; ++main_chain_start_offset)
-    {
-      timestamps.push_back(m_blocks[main_chain_start_offset].bl.timestamp);
-      commulative_difficulties.push_back(m_blocks[main_chain_start_offset].cumulative_difficulty);
-    }
-
-    CHECK_AND_ASSERT_MES((alt_chain.size() + timestamps.size()) <= DIFFICULTY_BLOCKS_COUNT, false, "Internal error, alt_chain.size()["<< alt_chain.size()
-                                                                                    << "] + vtimestampsec.size()[" << timestamps.size() << "] NOT <= DIFFICULTY_WINDOW[]" << DIFFICULTY_BLOCKS_COUNT );
-    BOOST_FOREACH(auto it, alt_chain)
-    {
-      timestamps.push_back(it->second.bl.timestamp);
-      commulative_difficulties.push_back(it->second.cumulative_difficulty);
-    }
-  }else
-  {
-    timestamps.resize(std::min(alt_chain.size(), static_cast<size_t>(DIFFICULTY_BLOCKS_COUNT)));
-    commulative_difficulties.resize(std::min(alt_chain.size(), static_cast<size_t>(DIFFICULTY_BLOCKS_COUNT)));
-    size_t count = 0;
-    size_t max_i = timestamps.size()-1;
-    BOOST_REVERSE_FOREACH(auto it, alt_chain)
-    {
-      timestamps[max_i - count] = it->second.bl.timestamp;
-      commulative_difficulties[max_i - count] = it->second.cumulative_difficulty;
-      count++;
-      if(count >= DIFFICULTY_BLOCKS_COUNT)
-        break;
-    }
+    bool is_pos_bl = is_pos_block(rit->bl);
+    if ((pos && !is_pos_bl) || (!pos && is_pos_bl))
+      continue;
+    timestamps.push_back(rit->bl.timestamp);
+    commulative_difficulties.push_back(rit->cumulative_difficulty);
   }
-  return next_difficulty(timestamps, commulative_difficulties);
+  return next_difficulty(timestamps, commulative_difficulties, pos ? DIFFICULTY_POS_TARGET : DIFFICULTY_POW_TARGET);
 }
 //------------------------------------------------------------------
-wide_difficulty_type blockchain_storage::get_next_pow_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::iterator>& alt_chain, block_extended_info& bei)
+wide_difficulty_type blockchain_storage::get_next_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::iterator>& alt_chain, block_extended_info& bei, bool pos)
 {
   std::vector<uint64_t> timestamps;
   std::vector<wide_difficulty_type> commulative_difficulties;
-  if (alt_chain.size() < DIFFICULTY_BLOCKS_COUNT)
-  {
-    CRITICAL_REGION_LOCAL(m_blockchain_lock);
-    size_t main_chain_stop_offset = alt_chain.size() ? alt_chain.front()->second.height : bei.height;
-    size_t main_chain_count = DIFFICULTY_BLOCKS_COUNT - std::min(static_cast<size_t>(DIFFICULTY_BLOCKS_COUNT), alt_chain.size());
-    main_chain_count = std::min(main_chain_count, main_chain_stop_offset);
-    size_t main_chain_start_offset = main_chain_stop_offset - main_chain_count;
 
-    if (!main_chain_start_offset)
-      ++main_chain_start_offset; //skip genesis block
-    for (; main_chain_start_offset < main_chain_stop_offset; ++main_chain_start_offset)
-    {
-      timestamps.push_back(m_blocks[main_chain_start_offset].bl.timestamp);
-      commulative_difficulties.push_back(m_blocks[main_chain_start_offset].cumulative_difficulty);
-    }
-
-    CHECK_AND_ASSERT_MES((alt_chain.size() + timestamps.size()) <= DIFFICULTY_BLOCKS_COUNT, false, "Internal error, alt_chain.size()[" << alt_chain.size()
-      << "] + vtimestampsec.size()[" << timestamps.size() << "] NOT <= DIFFICULTY_WINDOW[]" << DIFFICULTY_BLOCKS_COUNT);
-    BOOST_FOREACH(auto it, alt_chain)
-    {
-      timestamps.push_back(it->second.bl.timestamp);
-      commulative_difficulties.push_back(it->second.cumulative_difficulty);
-    }
-  }
-  else
+  for (auto it = alt_chain.rbegin(); it != alt_chain.rend() && timestamps.size() < DIFFICULTY_BLOCKS_COUNT; it++)
   {
-    timestamps.resize(std::min(alt_chain.size(), static_cast<size_t>(DIFFICULTY_BLOCKS_COUNT)));
-    commulative_difficulties.resize(std::min(alt_chain.size(), static_cast<size_t>(DIFFICULTY_BLOCKS_COUNT)));
-    size_t count = 0;
-    size_t max_i = timestamps.size() - 1;
-    BOOST_REVERSE_FOREACH(auto it, alt_chain)
-    {
-      timestamps[max_i - count] = it->second.bl.timestamp;
-      commulative_difficulties[max_i - count] = it->second.cumulative_difficulty;
-      count++;
-      if (count >= DIFFICULTY_BLOCKS_COUNT)
-        break;
-    }
+    bool is_pos_bl = is_pos_block((*it)->second.bl);
+    if ((pos && !is_pos_bl) || (!pos && is_pos_bl))
+      continue;
+    timestamps.push_back((*it)->second.bl.timestamp);
+    commulative_difficulties.push_back((*it)->second.cumulative_difficulty);
   }
-  return next_difficulty(timestamps, commulative_difficulties);
+
+  size_t main_chain_start_offset = alt_chain.size() ? alt_chain.front()->second.height : bei.height;
+  CHECK_AND_ASSERT_MES(main_chain_start_offset > 0, false, "Internal error: main_chain_start_offset > 0 check failed");
+  for (uint64_t i = main_chain_start_offset; i != 0 && timestamps.size() < DIFFICULTY_BLOCKS_COUNT; --i)
+  {
+    timestamps.push_back(m_blocks[i].bl.timestamp);
+    commulative_difficulties.push_back(m_blocks[i].cumulative_difficulty);
+  }
+
+  return next_difficulty(timestamps, commulative_difficulties, pos ? DIFFICULTY_POS_TARGET:DIFFICULTY_POW_TARGET);
 }
 //------------------------------------------------------------------
 bool blockchain_storage::prevalidate_miner_transaction(const block& b, uint64_t height)
@@ -997,49 +932,62 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
       if(ml.first < m_blocks[connection_height].scratch_offset)
         alt_scratchppad_patch[ml.first] = crypto::xor_pod(alt_scratchppad_patch[ml.first], ml.second);
     }
-
-    wide_difficulty_type current_diff = get_next_difficulty_for_alternative_chain(alt_chain, bei);
+    bool pos_block = is_pos_block(bei.bl);
+    wide_difficulty_type current_diff = get_next_difficulty_for_alternative_chain(alt_chain, bei, pos_block);
     CHECK_AND_ASSERT_MES(current_diff, false, "!!!!!!! DIFFICULTY OVERHEAD !!!!!!!");
+    
     crypto::hash proof_of_work = null_hash;
-    // POW
-#ifdef ENABLE_HASHING_DEBUG
-    size_t call_no = 0;
-    std::stringstream ss;      
-#endif
-    get_block_longhash(bei.bl, proof_of_work, bei.height, [&](uint64_t index) -> crypto::hash
+    if (pos_block)
     {
-      uint64_t offset = index%bei.scratch_offset;
-      crypto::hash res;
-      if(offset >= m_blocks[connection_height].scratch_offset)
-      {
-        res = alt_scratchppad[offset - m_blocks[connection_height].scratch_offset];
-      }else
-      {
-        res = m_scratchpad[offset];  
-      }
-      auto it = alt_scratchppad_patch.find(offset);
-      if(it != alt_scratchppad_patch.end())
-      {//apply patch
-        res = crypto::xor_pod(res, it->second);
-      }
-#ifdef ENABLE_HASHING_DEBUG
-      ss << "[" << call_no << "][" << index << "%" << bei.scratch_offset <<"(" << index%bei.scratch_offset << ")]" << res << ENDL;
-      ++call_no;
-#endif
-      return res;
-    });
-#ifdef ENABLE_HASHING_DEBUG
-    LOG_PRINT_L3("ID: " << get_block_hash(bei.bl) << "[" << bei.height <<  "]" << ENDL << "POW:" << proof_of_work << ENDL << ss.str());
-#endif
-    if(!check_hash(proof_of_work, current_diff))
-    {
-      LOG_PRINT_RED_L0("Block with id: " << id
-        << ENDL << " for alternative chain, have not enough proof of work: " << proof_of_work
-        << ENDL << " expected difficulty: " << current_diff);
-      bvc.m_verifivation_failed = true;
-      return false;
+      //POS
+      bool res = validate_pos_block(bei.bl, current_diff);
+      CHECK_AND_ASSERT_MES(res, false, "Failed to validate_pos_block on alternative block, height = " 
+                                        << bei.height 
+                                        << ", block id: " << get_block_hash(bei.bl));
     }
-    //
+    else
+    {
+      // POW
+#ifdef ENABLE_HASHING_DEBUG
+      size_t call_no = 0;
+      std::stringstream ss;
+#endif
+      get_block_longhash(bei.bl, proof_of_work, bei.height, [&](uint64_t index) -> crypto::hash
+      {
+        uint64_t offset = index%bei.scratch_offset;
+        crypto::hash res;
+        if (offset >= m_blocks[connection_height].scratch_offset)
+        {
+          res = alt_scratchppad[offset - m_blocks[connection_height].scratch_offset];
+        }
+        else
+        {
+          res = m_scratchpad[offset];
+        }
+        auto it = alt_scratchppad_patch.find(offset);
+        if (it != alt_scratchppad_patch.end())
+        {//apply patch
+          res = crypto::xor_pod(res, it->second);
+        }
+#ifdef ENABLE_HASHING_DEBUG
+        ss << "[" << call_no << "][" << index << "%" << bei.scratch_offset << "(" << index%bei.scratch_offset << ")]" << res << ENDL;
+        ++call_no;
+#endif
+        return res;
+      });
+#ifdef ENABLE_HASHING_DEBUG
+      LOG_PRINT_L3("ID: " << get_block_hash(bei.bl) << "[" << bei.height << "]" << ENDL << "POW:" << proof_of_work << ENDL << ss.str());
+#endif
+      if (!check_hash(proof_of_work, current_diff))
+      {
+        LOG_PRINT_RED_L0("Block with id: " << id
+          << ENDL << " for alternative chain, have not enough proof of work: " << proof_of_work
+          << ENDL << " expected difficulty: " << current_diff);
+        bvc.m_verifivation_failed = true;
+        return false;
+      }
+      //
+    }
     
     if(!m_checkpoints.is_in_checkpoint_zone(bei.height))
     {
@@ -2104,20 +2052,33 @@ bool check_pos_block(const block& b)
 //------------------------------------------------------------------
 bool blockchain_storage::validate_pos_block(const block& b)
 {
+  //validate 
+  wide_difficulty_type basic_diff = get_difficulty_for_next_pos_block();
+  return validate_pos_block(b, basic_diff);
+}
+//------------------------------------------------------------------
+bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type basic_diff)
+{
+  uint64_t coin_age = 0;
+  wide_difficulty_type final_diff = 0;
+  crypto::hash proof_hash = null_hash;
+  return validate_pos_block(b, basic_diff, coin_age, final_diff, proof_hash);
+}
+//------------------------------------------------------------------
+bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type basic_diff, uint64_t& coin_age, wide_difficulty_type& final_diff, crypto::hash& proof_hash)
+{
   bool is_pos = is_pos_block(b);
   CHECK_AND_ASSERT_MES(is_pos, false, "is_pos_block() returned false validate_pos_block()");
 
-  //validate 
-  wide_difficulty_type basic_diff = get_difficulty_for_next_pos_block();
   stake_kernel sk = AUTO_VAL_INIT(sk);
   uint64_t coindays_weight = 0;
   bool r = build_kernel(b, sk, coindays_weight);
   CHECK_AND_ASSERT_MES(r, false, "failed to build kernel_stake");
-  crypto::hash kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
-  wide_difficulty_type this_coin_diff = basic_diff / coindays_weight;
-  if (!check_hash(kernel_hash, this_coin_diff))
+  proof_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
+  final_diff = basic_diff / coindays_weight;
+  if (!check_hash(proof_hash, final_diff))
     return false;
-  
+
   return true;
 }
 //------------------------------------------------------------------
@@ -2143,30 +2104,34 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
     return false;
   }
 
-  if (is_pos_block(bl))
+  crypto::hash proof_hash = null_hash;
+  uint64_t coin_age = 0; 
+  wide_difficulty_type this_coin_diff = 0;
+  bool is_pos_bl = is_pos_block(bl);
+  //check proof of work
+  TIME_MEASURE_START(target_calculating_time);
+  wide_difficulty_type current_diffic = get_next_diff_conditional(is_pos_bl);
+  CHECK_AND_ASSERT_MES(current_diffic, false, "!!!!!!!!! difficulty overhead !!!!!!!!!");
+  TIME_MEASURE_FINISH(target_calculating_time);
+
+  TIME_MEASURE_START(longhash_calculating_time);
+  if (is_pos_bl)
   {
-    bool r = validate_pos_block(bl);
+    bool r = validate_pos_block(bl, current_diffic, coin_age, this_coin_diff, proof_hash);
     CHECK_AND_ASSERT_MES(r, false, "validate_pos_block failed!!");
   }
   else
   {
-    //check proof of work
-    TIME_MEASURE_START(target_calculating_time);
-    wide_difficulty_type current_diffic = is_pos_block(bl) ? get_difficulty_for_next_pos_block() : get_difficulty_for_next_pow_block();
-    CHECK_AND_ASSERT_MES(current_diffic, false, "!!!!!!!!! difficulty overhead !!!!!!!!!");
-    TIME_MEASURE_FINISH(target_calculating_time);
-    TIME_MEASURE_START(longhash_calculating_time);
-    crypto::hash proof_of_work = null_hash;
 
-    proof_of_work = get_block_longhash(bl, m_blocks.size(), [&](uint64_t index) -> crypto::hash&
+    proof_hash = get_block_longhash(bl, m_blocks.size(), [&](uint64_t index) -> crypto::hash&
     {
       return m_scratchpad[index%m_scratchpad.size()];
     });
 
-    if (!check_hash(proof_of_work, current_diffic))
+    if (!check_hash(proof_hash, current_diffic))
     {
       LOG_PRINT_L0("Block with id: " << id << ENDL
-        << "have not enough proof of work: " << proof_of_work << ENDL
+        << "have not enough proof of work: " << proof_hash << ENDL
         << "nexpected difficulty: " << current_diffic);
       bvc.m_verifivation_failed = true;
       return false;
@@ -2284,9 +2249,6 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
     bvc.m_verifivation_failed = true;
     return false;
   }
-
-  
-
   //append to scratchpad
   if(!push_block_scratchpad_data(bl, m_scratchpad))
   {
@@ -2304,8 +2266,20 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
   m_blocks.push_back(bei);
   update_next_comulative_size_limit();
   TIME_MEASURE_FINISH(block_processing_time);
-  LOG_PRINT_L1("+++++ BLOCK SUCCESSFULLY ADDED" << ENDL << "id:\t" << id
-    << ENDL << "PoW:\t" << proof_of_work
+
+  //print result
+  stringstream powpos_str_entry;
+  if (is_pos_bl)
+  {//write pos data:
+    powpos_str_entry << "coin_age: " << coin_age << ", final_difficluty: " << this_coin_diff
+      << ENDL << "PoS kernel hash:" << proof_hash;
+  }
+  else
+  {
+    powpos_str_entry << "PoW:\t" << proof_hash;
+  }
+  LOG_PRINT_L1("+++++ BLOCK SUCCESSFULLY ADDED" << (is_pos_bl ? "[PoS]":"[PoW]") << ENDL << "id:\t" << id
+    << ENDL << powpos_str_entry.str()
     << ENDL << "HEIGHT " << bei.height << ", difficulty:\t" << current_diffic
     << ENDL << "block reward: " << print_money(fee_summary + base_reward) << "(" << print_money(base_reward) << " + " << print_money(fee_summary) 
     << ")" << ", coinbase_blob_size: " << coinbase_blob_size << ", cumulative size: " << cumulative_block_size
@@ -2315,7 +2289,6 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
   
 
   m_tx_pool.on_blockchain_inc(bei.height, id);
-  //LOG_PRINT_L0("BLOCK: " << ENDL << "" << dump_obj_as_json(bei.bl));
   return true;
 }
 //------------------------------------------------------------------

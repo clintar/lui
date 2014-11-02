@@ -18,5 +18,6 @@ namespace currency
     pos_config pc = AUTO_VAL_INIT(pc);
     pc.min_coinage = POS_MIN_COINAGE;
     pc.max_coinage = POS_MAX_COINAGE;
+    return pc;
   }
 }
