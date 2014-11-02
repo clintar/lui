@@ -125,13 +125,13 @@ bool test_generator::construct_block(currency::block& blk, uint64_t height, cons
   while (true)
   {
     if (!construct_miner_tx(height, misc_utils::median(block_sizes), 
+                                    already_generated_coins,
                                     target_block_size, 
                                     total_fee, 
                                     miner_acc.get_keys().m_account_address, 
                                     blk.miner_tx, 
-                                    blobdata(), 
-                                    10,
-                                    0, 
+                                    blobdata(),
+                                    0,                                    
                                     ai))
       return false;
 
@@ -208,7 +208,7 @@ currency::wide_difficulty_type test_generator::get_difficulty_for_next_block(con
     timestamps.push_back(blocks[offset]->b.timestamp);
     commulative_difficulties.push_back(blocks[offset]->cumul_difficulty);
   }
-  return next_difficulty(timestamps, commulative_difficulties);
+  return next_difficulty(timestamps, commulative_difficulties, DIFFICULTY_POW_TARGET);
 }
 
 
@@ -249,7 +249,7 @@ bool test_generator::construct_block(currency::block& blk, const currency::accou
 {
   std::vector<size_t> block_sizes;
   std::list<currency::transaction> tx_list;
-  return construct_block(blk, 0, null_hash, miner_acc, timestamp, 0, 0, block_sizes, tx_list, ai);
+  return construct_block(blk, 0, null_hash, miner_acc, timestamp, 0, block_sizes, tx_list, ai);
 }
 
 bool test_generator::construct_block(currency::block& blk, const currency::block& blk_prev,
@@ -594,7 +594,7 @@ bool construct_miner_tx_manually(size_t height, uint64_t already_generated_coins
 
   // This will work, until size of constructed block is less then CURRENCY_BLOCK_GRANTED_FULL_REWARD_ZONE
   uint64_t block_reward;
-  if (!get_block_reward(0, 0, already_generated_coins, 0, block_reward))
+  if (!get_block_reward(0, 0, already_generated_coins, block_reward))
   {
     LOG_PRINT_L0("Block is too big");
     return false;

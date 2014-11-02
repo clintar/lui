@@ -56,6 +56,7 @@ namespace currency
     return true;
   }
   //---------------------------------------------------------------
+  /*
   bool construct_miner_tx(size_t height, size_t median_size, uint64_t already_generated_coins, 
                                                              size_t current_block_size, 
                                                              uint64_t fee, 
@@ -75,7 +76,7 @@ namespace currency
                                                                             alias, 
                                                                             false, 
                                                                             pos_entry());
-  }
+  }*/
   //---------------------------------------------------------------
   bool construct_miner_tx(size_t height, size_t median_size, uint64_t already_generated_coins, 
                                                              size_t current_block_size, 

@@ -19,7 +19,7 @@ namespace
     for (size_t i = 0; i < new_block_count; ++i)
     {
       block blk_next;
-      wide_difficulty_type diffic = next_difficulty(timestamps, cummulative_difficulties);
+      wide_difficulty_type diffic = next_difficulty(timestamps, cummulative_difficulties, DIFFICULTY_POW_TARGET);
       if (!generator.construct_block_manually(blk_next, blk_prev, miner_account,
         test_generator::bf_timestamp | test_generator::bf_diffic, 0, 0, blk_prev.timestamp, crypto::hash(), diffic))
         return false;
@@ -149,7 +149,7 @@ bool gen_block_invalid_nonce::generate(std::vector<test_event_entry>& events) co
     return false;
 
   // Create invalid nonce
-  wide_difficulty_type diffic = next_difficulty(timestamps, commulative_difficulties);
+  wide_difficulty_type diffic = next_difficulty(timestamps, commulative_difficulties, DIFFICULTY_POW_TARGET);
   assert(1 < diffic);
   const block& blk_last = boost::get<block>(events.back());
   uint64_t timestamp = blk_last.timestamp;
