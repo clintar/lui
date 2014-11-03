@@ -576,13 +576,13 @@ wide_difficulty_type blockchain_storage::get_next_difficulty_for_alternative_cha
     commulative_difficulties.push_back((*it)->second.cumulative_difficulty);
   }
 
-  size_t main_chain_start_offset = alt_chain.size() ? alt_chain.front()->second.height : bei.height;
+  size_t main_chain_start_offset = (alt_chain.size() ? alt_chain.front()->second.height : bei.height)-1;
   CHECK_AND_ASSERT_MES(main_chain_start_offset > 0, false, "Internal error: main_chain_start_offset > 0 check failed");
   for (uint64_t i = main_chain_start_offset; i != 0 && timestamps.size() < DIFFICULTY_BLOCKS_COUNT; --i)
   {
     timestamps.push_back(m_blocks[i].bl.timestamp);
     commulative_difficulties.push_back(m_blocks[i].cumulative_difficulty);
-  }
+  } 
 
   return next_difficulty(timestamps, commulative_difficulties, pos ? DIFFICULTY_POS_TARGET:DIFFICULTY_POW_TARGET);
 }

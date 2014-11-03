@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
   else //if (command_line::get_arg(vm, arg_generate_and_play_test_data))
   {    
     
-    /*GENERATE_AND_PLAY(prun_ring_signatures);
+    GENERATE_AND_PLAY(prun_ring_signatures);
     GENERATE_AND_PLAY(get_random_outs_test);
     GENERATE_AND_PLAY(mix_attr_tests);
     GENERATE_AND_PLAY(gen_simple_chain_001);
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
     GENERATE_AND_PLAY(gen_block_miner_tx_has_out_to_alice);
     GENERATE_AND_PLAY(gen_block_has_invalid_tx);
     GENERATE_AND_PLAY(gen_block_is_too_big);
-    GENERATE_AND_PLAY(gen_block_invalid_binary_format);*/ // Takes up to 3 hours, if CURRENCY_MINED_MONEY_UNLOCK_WINDOW == 500, up to 30 minutes, if CURRENCY_MINED_MONEY_UNLOCK_WINDOW == 10
+    GENERATE_AND_PLAY(gen_block_invalid_binary_format); // Takes up to 3 hours, if CURRENCY_MINED_MONEY_UNLOCK_WINDOW == 500, up to 30 minutes, if CURRENCY_MINED_MONEY_UNLOCK_WINDOW == 10
     GENERATE_AND_PLAY(gen_alias_tests); 
 
     
