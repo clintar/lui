@@ -23,7 +23,7 @@ using namespace std;
 using namespace epee;
 using namespace currency;
 
-#define DIFF_UP_TIMESTAMP_DELTA 90
+#define DIFF_UP_TIMESTAMP_DELTA 180
 
 void test_generator::get_block_chain(std::vector<const block_info*>& blockchain, const crypto::hash& head, size_t n) const
 {
@@ -131,7 +131,7 @@ bool test_generator::construct_block(currency::block& blk, uint64_t height, cons
                                     miner_acc.get_keys().m_account_address, 
                                     blk.miner_tx, 
                                     blobdata(),
-                                    0,                                    
+                                    11,                                    
                                     ai))
       return false;
 
@@ -178,6 +178,7 @@ bool test_generator::construct_block(currency::block& blk, uint64_t height, cons
   get_block_chain(blocks, blk.prev_id, std::numeric_limits<size_t>::max());
 
   wide_difficulty_type a_diffic = get_difficulty_for_next_block(blocks);
+  CHECK_AND_ASSERT_MES(a_diffic, false, "get_difficulty_for_next_block for test blocks returned 0!");
   // Nonce search...
   blk.nonce = 0;
   while (!find_nounce(blk, blocks, a_diffic, height))
@@ -200,13 +201,13 @@ currency::wide_difficulty_type test_generator::get_difficulty_for_next_block(con
 {
   std::vector<uint64_t> timestamps;
   std::vector<wide_difficulty_type> commulative_difficulties;
-  size_t offset = blocks.size() - std::min(blocks.size(), static_cast<size_t>(DIFFICULTY_BLOCKS_COUNT));
-  if(!offset)
-    ++offset;//skip genesis block
-  for(; offset < blocks.size(); offset++)
+  if (!blocks.size())
+    return DIFFICULTY_STARTER;
+
+  for (size_t i = blocks.size() - 1; i != 0; --i)
   {
-    timestamps.push_back(blocks[offset]->b.timestamp);
-    commulative_difficulties.push_back(blocks[offset]->cumul_difficulty);
+    timestamps.push_back(blocks[i]->b.timestamp);
+    commulative_difficulties.push_back(blocks[i]->cumul_difficulty);
   }
   return next_difficulty(timestamps, commulative_difficulties, DIFFICULTY_POW_TARGET);
 }
@@ -259,7 +260,7 @@ bool test_generator::construct_block(currency::block& blk, const currency::block
   uint64_t height = boost::get<txin_gen>(blk_prev.miner_tx.vin.front()).height + 1;
   crypto::hash prev_id = get_block_hash(blk_prev);
   // Keep push difficulty little up to be sure about PoW hash success
-  uint64_t timestamp = height > 10 ? blk_prev.timestamp + DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN: blk_prev.timestamp + DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN - DIFF_UP_TIMESTAMP_DELTA;
+  uint64_t timestamp = height > 10 ? blk_prev.timestamp + DIFFICULTY_POW_TARGET : blk_prev.timestamp + DIFFICULTY_POW_TARGET - DIFF_UP_TIMESTAMP_DELTA;
   uint64_t already_generated_coins = get_already_generated_coins(prev_id);
   std::vector<size_t> block_sizes;
   get_last_n_block_sizes(block_sizes, prev_id, CURRENCY_REWARD_BLOCKS_WINDOW);

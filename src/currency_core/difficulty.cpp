@@ -8,11 +8,12 @@
 #include <cstdint>
 #include <vector>
 
+#include "misc_log_ex.h"
+
 #include "common/int-util.h"
 #include "crypto/hash.h"
 #include "currency_config.h"
 #include "difficulty.h"
-
 namespace currency {
 
   using std::size_t;
@@ -153,13 +154,13 @@ namespace currency {
 
 
     size_t length = timestamps.size();
-    assert(length == cumulative_difficulties.size());
+    CHECK_AND_ASSERT_MES(length == cumulative_difficulties.size(), 0, "Check \"length == cumulative_difficulties.size()\" failed");
     if (length <= 1) {
       return DIFFICULTY_STARTER;
     }
     static_assert(DIFFICULTY_WINDOW >= 2, "Window is too small");
-    assert(length <= DIFFICULTY_WINDOW);
-    sort(timestamps.begin(), timestamps.end());
+    CHECK_AND_ASSERT_MES(length <= DIFFICULTY_WINDOW, 0, "length <= DIFFICULTY_WINDOW check failed, length=" << length);
+    sort(timestamps.begin(), timestamps.end(), std::greater<>());
     size_t cut_begin, cut_end;
     static_assert(2 * DIFFICULTY_CUT <= DIFFICULTY_WINDOW - 2, "Cut length is too large");
     if (length <= DIFFICULTY_WINDOW - 2 * DIFFICULTY_CUT) {
@@ -170,26 +171,14 @@ namespace currency {
       cut_end = cut_begin + (DIFFICULTY_WINDOW - 2 * DIFFICULTY_CUT);
     }
     assert(/*cut_begin >= 0 &&*/ cut_begin + 2 <= cut_end && cut_end <= length);
-    uint64_t time_span = timestamps[cut_end - 1] - timestamps[cut_begin];
+    uint64_t time_span = timestamps[cut_begin] - timestamps[cut_end - 1];
     if (time_span == 0) {
       time_span = 1;
     }
-    wide_difficulty_type total_work = cumulative_difficulties[cut_end - 1] - cumulative_difficulties[cut_begin];
-    assert(total_work > 0);
+    wide_difficulty_type total_work = cumulative_difficulties[cut_begin] - cumulative_difficulties[cut_end - 1];
     boost::multiprecision::uint256_t res =  (boost::multiprecision::uint256_t(total_work) * target_seconds + time_span - 1) / time_span;
     if(res > max128bit)
-	    return 0; // to behave like previuos implementation, may be better return max128bit?
+	    return 0; // to behave like previous implementation, may be better return max128bit?
     return res.convert_to<wide_difficulty_type>();
   }
-
-/*  difficulty_type next_difficulty_old(vector<uint64_t> timestamps, vector<difficulty_type> cumulative_difficulties)
-  {
-    return next_difficulty_old(std::move(timestamps), std::move(cumulative_difficulties), DIFFICULTY_TARGET);
-  }
-*/
-/*  wide_difficulty_type next_difficulty(vector<uint64_t> timestamps, vector<wide_difficulty_type> cumulative_difficulties)
-  {
-    return next_difficulty(std::move(timestamps), std::move(cumulative_difficulties), DIFFICULTY_TARGET);
-  }
-*/
 }

@@ -30,8 +30,9 @@ namespace
         timestamps.erase(timestamps.begin());
         cummulative_difficulties.erase(cummulative_difficulties.begin());
       }
-      timestamps.push_back(blk_next.timestamp);
-      cummulative_difficulties.push_back(commulative_diffic);
+      //TODO: VERY ineffective way, need to rewrite
+      timestamps.insert(timestamps.begin(), blk_next.timestamp);
+      cummulative_difficulties.insert(cummulative_difficulties.begin(), commulative_diffic);
 
       events.push_back(blk_next);
       blk_prev = blk_next;
@@ -150,7 +151,7 @@ bool gen_block_invalid_nonce::generate(std::vector<test_event_entry>& events) co
 
   // Create invalid nonce
   wide_difficulty_type diffic = next_difficulty(timestamps, commulative_difficulties, DIFFICULTY_POW_TARGET);
-  assert(1 < diffic);
+  CHECK_AND_ASSERT_MES(diffic > 1, false, "diffic > 1 validation failed");
   const block& blk_last = boost::get<block>(events.back());
   uint64_t timestamp = blk_last.timestamp;
   block blk_3;
@@ -542,6 +543,7 @@ bool gen_block_invalid_binary_format::generate(std::vector<test_event_entry>& ev
     MAKE_NEXT_BLOCK(events, blk_curr, blk_last, miner_account);
     diffic = generator.get_block_difficulty(get_block_hash(blk_curr));
     std::cout << "Block #" << events.size() << ", difficulty: " << diffic << std::endl;
+    blk_last = blk_curr;
   }
   while (diffic < 200);
 
