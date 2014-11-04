@@ -134,12 +134,14 @@ namespace currency
     // --- PoS ---    
     bool build_kernel(const block& bl, stake_kernel& kernel, uint64_t& coindays_weight);
     bool build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coindays_weight);
+    bool build_stake_modifier(crypto::hash& sm);
     bool scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMAND_RPC_SCAN_POS::response& rsp);
     bool validate_pos_block(const block& b);
     bool validate_pos_block(const block& b, wide_difficulty_type basic_diff);
     bool validate_pos_block(const block& b, wide_difficulty_type basic_diff, uint64_t& coin_age, wide_difficulty_type& final_diff, crypto::hash& proof_hash);
     uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age);
     bool is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp);
+    void set_pos_config(const pos_config& pc);
 
 
     template<class t_ids_container, class t_blocks_container, class t_missed_container>

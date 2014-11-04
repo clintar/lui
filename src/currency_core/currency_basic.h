@@ -294,7 +294,7 @@ namespace currency
 #pragma pack(push, 1)
   struct stake_kernel
   {
-    uint64_t stake_modifier;
+    crypto::hash stake_modifier;
     uint64_t tx_block_timestamp;   // (?) source transaction block timestamp
     //uint64_t tx_offset_in_block; // (?) they use tx offset on disk, on block, we don't have off this shit
     //uint64_t tx_timestamp;       // (?) we don't have transactions timestamps

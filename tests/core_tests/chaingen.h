@@ -524,6 +524,12 @@ inline bool do_replay_file(const std::string& filename)
   generator.construct_block(BLK_NAME, PREV_BLOCK, MINER_ACC);                         \
   VEC_EVENTS.push_back(BLK_NAME);
 
+#define MAKE_NEXT_POS_BLOCK(VEC_EVENTS, BLK_NAME, PREV_BLOCK, MINER_ACC)              \
+  currency::block BLK_NAME = AUTO_VAL_INIT(BLK_NAME);                                 \
+  generator.construct_block(BLK_NAME, PREV_BLOCK, MINER_ACC);                         \
+  VEC_EVENTS.push_back(BLK_NAME);
+
+
 #define MAKE_NEXT_BLOCK_ALIAS(VEC_EVENTS, BLK_NAME, PREV_BLOCK, MINER_ACC, ALIAS)     \
   currency::block BLK_NAME = AUTO_VAL_INIT(BLK_NAME);                                 \
   generator.construct_block(BLK_NAME, PREV_BLOCK, MINER_ACC,                          \

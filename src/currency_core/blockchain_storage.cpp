@@ -2338,6 +2338,27 @@ bool blockchain_storage::build_kernel(const block& bl, stake_kernel& kernel, uin
   return build_kernel(txin.amount, txin.key_offsets[0], txin.k_image, kernel, coindays_weight);
 }
 //------------------------------------------------------------------
+bool blockchain_storage::build_stake_modifier(crypto::hash& sm)
+{
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+  //temporary implementation
+  uint64_t height_for_modifier = 0;
+  sm = null_hash;
+  if (get_current_blockchain_height() < POS_MODFIFIER_INTERVAL)
+  {
+    bool r = string_tools::parse_tpod_from_hex_string(POS_STARTER_MODFIFIER, sm);
+    CHECK_AND_ASSERT_MES(r, false, "Failed to parse POS_STARTER_MODFIFIER");
+    return true;
+  }
+
+  uint64_t height_for_modifier = get_current_blockchain_height() - (get_current_blockchain_height() % POS_MODFIFIER_INTERVAL);
+  crypto::xor_pod(sm, get_block_hash(m_blocks[height_for_modifier - 4].bl));
+  crypto::xor_pod(sm, get_block_hash(m_blocks[height_for_modifier - 6].bl));
+  crypto::xor_pod(sm, get_block_hash(m_blocks[height_for_modifier - 8].bl));
+
+  return true;
+}
+//------------------------------------------------------------------
 bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coindays_weight)
 {
   coindays_weight = 0;
@@ -2419,4 +2440,9 @@ bool blockchain_storage::is_coin_age_okay(uint64_t source_tx_block_timestamp, ui
   if (last_block_timestamp - source_tx_block_timestamp < m_pos_config.min_coinage)
     return false;
   return true;
+}
+//------------------------------------------------------------------
+void blockchain_storage::set_pos_config(const pos_config& pc)
+{
+  m_pos_config = pc;
 }
