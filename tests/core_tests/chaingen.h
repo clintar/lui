@@ -228,10 +228,18 @@ public:
                     uint64_t& coindays_weight,
                     const test_generator::blockchain_vector& blck_chain,
                     const test_generator::outputs_index& indexes);
+  
   bool find_kernel(const std::list<currency::account_base>& accs,
                    const test_generator::blockchain_vector& blck_chain,
                    const test_generator::outputs_index& indexes,
-                   pos_entry& pe);
+                   std::list<tools::wallet2>& wallets,
+                   pos_entry& pe,
+                   size_t found_wallet_index);
+
+  bool build_wallets(const blockchain_vector& blocks,
+                     const std::list<currency::account_base>& accs,
+                     std::list<tools::wallet2>& wallets)
+
 
   
   uint64_t get_already_generated_coins(const crypto::hash& blk_id) const;

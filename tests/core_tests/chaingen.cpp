@@ -132,8 +132,9 @@ bool test_generator::construct_block(currency::block& blk,
   blockchain_vector blocks;
   get_block_chain(blocks, blk.prev_id, std::numeric_limits<size_t>::max());
 
-
   //pos
+  std::list<tools::wallet2> wallets;
+  size_t won_walled_index = 0;
   pos_entry pe = AUTO_VAL_INIT(pe);
   if (coin_stake_sources.size())
   {
@@ -141,7 +142,10 @@ bool test_generator::construct_block(currency::block& blk,
     outputs_index oi;
     build_outputs_indext_for_chain(blocks, oi);
 
-    bool r = find_kernel(coin_stake_sources, blocks, oi, pe);
+    //build wallets
+    build_wallets(blocks, coin_stake_sources, wallets);
+
+    bool r = find_kernel(coin_stake_sources, blocks, oi, wallets, pe, won_walled_index);
     CHECK_AND_ASSERT_THROW_MES(r, "failed to find_kernel ");
   }
 
@@ -229,13 +233,12 @@ bool test_generator::construct_block(currency::block& blk,
   return true;
 }
 
-bool test_generator::find_kernel(const std::list<currency::account_base>& accs, 
-                                 const test_generator::blockchain_vector& blck_chain,
-                                 const test_generator::outputs_index& indexes,
-                                 pos_entry& pe)
+bool test_generator::build_wallets(const blockchain_vector& blocks, 
+                                   const std::list<currency::account_base>& accs, 
+                                   std::list<tools::wallet2>& wallets)
 {
   //build wallets
-  std::list<tools::wallet2> wallets;
+  wallets.clear();
   for (auto a : accs)
   {
     wallets.push_back(tools::wallet2());
@@ -244,12 +247,12 @@ bool test_generator::find_kernel(const std::list<currency::account_base>& accs,
   uint64_t height = 0;
   for (auto& w : wallets)
   {
-    for (auto& b : blck_chain)
+    for (auto& b : blocks)
     {
       uint64_t h = get_block_height(b->b);
       if (!h)
         continue;
-      CHECK_AND_ASSERT_MES(height+1 == h, false, "Failed to return");
+      CHECK_AND_ASSERT_MES(height + 1 == h, false, "Failed to return");
       height = h;
       //skip genesis
       currency::block_complete_entry bce = AUTO_VAL_INIT(bce);
@@ -263,12 +266,25 @@ bool test_generator::find_kernel(const std::list<currency::account_base>& accs,
       CHECK_AND_ASSERT_THROW_MES(r, "Failed to process_new_blockchain_entry()");
     }
   }
+  return true;
+}
+
+bool build_kernel(uint64_t amount,
+                  uint64_t global_index,
+                  const crypto::key_image& ki,
+                  stake_kernel& kernel,
+                  uint64_t& coindays_weight,
+                  const test_generator::blockchain_vector& blck_chain,
+                  const test_generator::outputs_index& indexes)
+{
+
   uint64_t timstamp_start = 0;
   wide_difficulty_type basic_diff = 0;
   timstamp_start = blck_chain.back()->b.timestamp;
   basic_diff = get_difficulty_for_next_block(blck_chain, false);
 
   //lets try to find block
+  size_t i = 0;
   for (auto& w : wallets)
   {
     currency::COMMAND_RPC_SCAN_POS::request scan_pos_entries;
@@ -299,10 +315,12 @@ bool test_generator::find_kernel(const std::list<currency::account_base>& accs,
             << ", index=" << scan_pos_entries.pos_entries[i].index 
             << ", key_image" << scan_pos_entries.pos_entries[i].keyimage, LOG_LEVEL_0);
           pe = scan_pos_entries.pos_entries[i];
+          found_wallet_index = i;
           return true;
         }
       }
     }
+    i++;
   }
 
 
@@ -374,10 +392,12 @@ bool test_generator::build_stake_modifier(crypto::hash& sm, const test_generator
 
   return true;
 }
-bool test_generator::sign_block(block& bock, pos_entry& pe, const std::list<currency::account_base>& accs, const std::vector<const block_info*>& blocks)
+
+bool test_generator::sign_block(block& bock, pos_entry& pe, wallet2& w, const std::vector<const block_info*>& blocks)
 {
 
 }
+
 bool test_generator::call_COMMAND_RPC_SCAN_POS(const currency::COMMAND_RPC_SCAN_POS::request& req, currency::COMMAND_RPC_SCAN_POS::response& rsp)
 {
   return false;
