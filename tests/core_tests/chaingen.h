@@ -161,7 +161,7 @@ private:
 };
 
 
-class test_generator
+class test_generator : public tools::i_core_proxy
 {
 public:
   struct block_info
@@ -174,11 +174,16 @@ public:
     {
     }
 
-    block_info(const currency::block& b_, uint64_t an_already_generated_coins, size_t a_block_size, currency::wide_difficulty_type diff)
+    block_info(const currency::block& b_, 
+               uint64_t an_already_generated_coins, 
+               size_t a_block_size, 
+               currency::wide_difficulty_type diff,
+               const std::list<currency::transaction>& tx_list)
       : b(b_)
       , already_generated_coins(an_already_generated_coins)
       , block_size(a_block_size)
-      , cumul_difficulty(diff)
+      , cumul_difficulty(diff), 
+      m_transactions(tx_list)
     {
     }
 
@@ -186,7 +191,13 @@ public:
     uint64_t already_generated_coins;
     size_t block_size;
     currency::wide_difficulty_type cumul_difficulty;
+    std::vector<transaction> m_transactions;
   };
+
+  //               amount             vec_ind, tx_index, out index in tx
+  typedef std::map<uint64_t, std::vector<std::tuple<size_t, size_t, size_t> > > outputs_index;
+  typedef std::vector<const block_info*> blockchain_vector;
+
 
   enum block_fields
   {
@@ -199,22 +210,61 @@ public:
     bf_tx_hashes = 1 << 5,
     bf_diffic    = 1 << 6
   };
+  //----------- tools::i_core_proxy
+  virtual bool call_COMMAND_RPC_SCAN_POS(const currency::COMMAND_RPC_SCAN_POS::request& req, currency::COMMAND_RPC_SCAN_POS::response& rsp);
 
-  currency::wide_difficulty_type get_difficulty_for_next_block(const std::vector<const block_info*>& blocks);
-  currency::wide_difficulty_type get_difficulty_for_next_block(const crypto::hash& head_id);
+  //-----------
+  bool find_kernel_and_sign(block& bock, const std::list<currency::account_base>& accs, const std::vector<const block_info*>& blocks);
+  currency::wide_difficulty_type get_difficulty_for_next_block(const std::vector<const block_info*>& blocks, bool pow = true);
+  currency::wide_difficulty_type get_difficulty_for_next_block(const crypto::hash& head_id, bool pow = true);
   void get_block_chain(std::vector<const block_info*>& blockchain, const crypto::hash& head, size_t n) const;
   void get_last_n_block_sizes(std::vector<size_t>& block_sizes, const crypto::hash& head, size_t n) const;
+  //POS
+  bool build_stake_modifier(crypto::hash& sm, const test_generator::blockchain_vector& blck_chain);
+  bool build_kernel(uint64_t amount, 
+                    uint64_t global_index, 
+                    const crypto::key_image& ki,
+                    stake_kernel& kernel,
+                    uint64_t& coindays_weight,
+                    const test_generator::blockchain_vector& blck_chain,
+                    const test_generator::outputs_index& indexes);
+  bool find_kernel(const std::list<currency::account_base>& accs,
+                   const test_generator::blockchain_vector& blck_chain,
+                   const test_generator::outputs_index& indexes,
+                   pos_entry& pe);
+
   
   uint64_t get_already_generated_coins(const crypto::hash& blk_id) const;
   uint64_t get_already_generated_coins(const currency::block& blk) const;
   currency::wide_difficulty_type get_block_difficulty(const crypto::hash& blk_id) const;
 
-  void add_block(const currency::block& blk, size_t tsx_size, std::vector<size_t>& block_sizes, uint64_t already_generated_coins, currency::wide_difficulty_type cum_diff);
-  bool construct_block(currency::block& blk, uint64_t height, const crypto::hash& prev_id,
-    const currency::account_base& miner_acc, uint64_t timestamp, uint64_t already_generated_coins,  std::vector<size_t>& block_sizes, const std::list<currency::transaction>& tx_list, const currency::alias_info& ai = currency::alias_info());
-  bool construct_block(currency::block& blk, const currency::account_base& miner_acc, uint64_t timestamp, const currency::alias_info& ai = currency::alias_info());
-  bool construct_block(currency::block& blk, const currency::block& blk_prev, const currency::account_base& miner_acc,
-    const std::list<currency::transaction>& tx_list = std::list<currency::transaction>(), const currency::alias_info& ai = currency::alias_info());
+  bool test_generator::build_outputs_indext_for_chain(const std::vector<const block_info*>& blocks, outputs_index& index);
+
+
+  void add_block(const currency::block& blk, size_t tsx_size, std::vector<size_t>& block_sizes, uint64_t already_generated_coins, currency::wide_difficulty_type cum_diff, const const std::list<currency::transaction>& tx_list);
+  bool construct_block(currency::block& blk, 
+    uint64_t height, 
+    const crypto::hash& prev_id,
+    const currency::account_base& miner_acc, 
+    uint64_t timestamp, 
+    uint64_t already_generated_coins,  
+    std::vector<size_t>& block_sizes, 
+    const std::list<currency::transaction>& tx_list, 
+    const currency::alias_info& ai = currency::alias_info(), 
+    const std::list<currency::account_base>& coin_stake_sources = std::list<currency::account_base>() //in case of PoS block
+    );
+  bool construct_block(currency::block& blk, 
+    const currency::account_base& miner_acc, 
+    uint64_t timestamp, 
+    const currency::alias_info& ai = currency::alias_info());
+  bool construct_block(currency::block& blk, 
+    const currency::block& blk_prev, 
+    const currency::account_base& miner_acc, 
+    const std::list<currency::transaction>& tx_list = std::list<currency::transaction>(), 
+    const currency::alias_info& ai = currency::alias_info(),
+    const std::list<currency::account_base>& coin_stake_sources = std::list<currency::account_base>() //in case of PoS block
+    );
+
 
   bool construct_block_manually(currency::block& blk, const currency::block& prev_block,
     const currency::account_base& miner_acc, int actual_params = bf_none, uint8_t major_ver = 0,
@@ -524,9 +574,9 @@ inline bool do_replay_file(const std::string& filename)
   generator.construct_block(BLK_NAME, PREV_BLOCK, MINER_ACC);                         \
   VEC_EVENTS.push_back(BLK_NAME);
 
-#define MAKE_NEXT_POS_BLOCK(VEC_EVENTS, BLK_NAME, PREV_BLOCK, MINER_ACC)              \
+#define MAKE_NEXT_POS_BLOCK(VEC_EVENTS, BLK_NAME, PREV_BLOCK, MINER_ACC, MINERS_ACC_LIST)         \
   currency::block BLK_NAME = AUTO_VAL_INIT(BLK_NAME);                                 \
-  generator.construct_block(BLK_NAME, PREV_BLOCK, MINER_ACC);                         \
+  generator.construct_block(BLK_NAME, PREV_BLOCK, MINER_ACC, std::list<currency::transaction>(), currency::alias_info(), MINERS_ACC_LIST);                         \
   VEC_EVENTS.push_back(BLK_NAME);
 
 

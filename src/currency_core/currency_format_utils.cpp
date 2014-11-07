@@ -104,19 +104,17 @@ namespace currency
         return false;
     }
 
-    if (!pos)
+    txin_gen in;
+    in.height = height;
+    tx.vin.push_back(in);
+
+    if(pos)
     {
-      txin_gen in;
-      in.height = height;
-      tx.vin.push_back(in);
-    }
-    else
-    {
-      txin_to_key in;
-      in.amount = pe.amount;
-      in.key_offsets.push_back(pe.index);
-      in.k_image = pe.keyimage;
-      tx.vin.push_back(in);
+      txin_to_key posin;
+      posin.amount = pe.amount;
+      posin.key_offsets.push_back(pe.index);
+      posin.k_image = pe.keyimage;
+      tx.vin.push_back(posin);
       //reserve place for ring signature
       tx.signatures.resize(1);
     }
@@ -613,7 +611,7 @@ namespace currency
   //---------------------------------------------------------------
   uint64_t get_block_height(const block& b)
   {
-    CHECK_AND_ASSERT_MES(b.miner_tx.vin.size() == 1, 0, "wrong miner tx in block: " << get_block_hash(b) << ", b.miner_tx.vin.size() != 1");
+    CHECK_AND_ASSERT_MES(b.miner_tx.vin.size() < 2, 0, "wrong miner tx in block: " << get_block_hash(b) << ", b.miner_tx.vin.size() != 1");
     CHECKED_GET_SPECIFIC_VARIANT(b.miner_tx.vin[0], const txin_gen, coinbase_in, 0);
     return coinbase_in.height;
   }

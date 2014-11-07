@@ -571,6 +571,13 @@ void wallet2::load_keys(const std::string& keys_file_name, const std::string& pa
   CHECK_AND_THROW_WALLET_EX(!r, error::invalid_password);
 }
 //----------------------------------------------------------------------------------------------------
+void wallet2::assign_account(const currency::account_base& acc)
+{
+  clear();
+  m_account = acc;
+  m_account_public_address = m_account.get_keys().m_account_address;
+}
+//----------------------------------------------------------------------------------------------------
 void wallet2::generate(const std::string& wallet_, const std::string& password)
 {
   clear();
@@ -707,18 +714,16 @@ bool wallet2::get_transfer_address(const std::string& adr_str, currency::account
   return m_core_proxy->get_transfer_address(adr_str, addr);
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::try_mint_pos()
+bool wallet2::get_pos_entries(currency::COMMAND_RPC_SCAN_POS::request& req)
 {
-  currency::COMMAND_RPC_SCAN_POS::request req = AUTO_VAL_INIT(req);
-  currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
-  
   for (size_t i = 0; i != m_transfers.size(); i++)
   {
     auto& tr = m_transfers[i];
     if (tr.m_spent)
       continue;
-    if (!is_coin_age_okay(tr.m_block_timestamp, m_last_bc_timestamp))
-      continue;
+    //TODO: implement coin_age policy in wallets
+    //if (!is_coin_age_okay(tr.m_block_timestamp, m_last_bc_timestamp))
+    //  continue;
     currency::pos_entry pe = AUTO_VAL_INIT(pe);
     pe.amount = tr.amount();
     pe.index = tr.m_global_output_index;
@@ -726,6 +731,20 @@ bool wallet2::try_mint_pos()
     pe.wallet_index = i;
     req.pos_entries.push_back(pe);
   }
+
+  return true;
+}
+//----------------------------------------------------------------------------------------------------
+bool wallet2::prepare_and_sign_pos_block(block& bl_template, const pos_entry& pos_info)
+{
+
+}
+//----------------------------------------------------------------------------------------------------
+bool wallet2::try_mint_pos()
+{
+  currency::COMMAND_RPC_SCAN_POS::request req = AUTO_VAL_INIT(req);
+  currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
+  
   m_core_proxy->call_COMMAND_RPC_SCAN_POS(req, rsp);
   if (rsp.status == CORE_RPC_STATUS_OK)
   {
@@ -751,8 +770,9 @@ bool wallet2::try_mint_pos()
     CHECK_AND_ASSERT_MES(res, false, "Failed to create block template after kernel hash found!");
 
     //generate coinbase transaction
-    CHECK_AND_ASSERT_MES(b.miner_tx.vin[0].type() == typeid(currency::txin_to_key), false, "Wrong output input in transaction");
-    auto& txin = boost::get<currency::txin_to_key>(b.miner_tx.vin[0]);
+    CHECK_AND_ASSERT_MES(b.miner_tx.vin[0].type() == typeid(currency::txin_gen), false, "Wrong output input in transaction");
+    CHECK_AND_ASSERT_MES(b.miner_tx.vin[1].type() == typeid(currency::txin_to_key), false, "Wrong output input in transaction");
+    auto& txin = boost::get<currency::txin_to_key>(b.miner_tx.vin[1]);
     txin.k_image = req.pos_entries[rsp.index].keyimage;
     CHECK_AND_ASSERT_MES(b.miner_tx.signatures.size() == 1 && b.miner_tx.signatures[0].size() == 1,
       false, "Wrong signatures amount in coinbase transacton");

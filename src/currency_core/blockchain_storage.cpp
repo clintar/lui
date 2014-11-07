@@ -2329,10 +2329,11 @@ bool blockchain_storage::add_new_block(const block& bl_, block_verification_cont
 //------------------------------------------------------------------
 bool blockchain_storage::build_kernel(const block& bl, stake_kernel& kernel, uint64_t& coindays_weight)
 {
-  CHECK_AND_ASSERT_MES(bl.miner_tx.vin.size(), false, "wrong miner transaction");
-  CHECK_AND_ASSERT_MES(bl.miner_tx.vin[0].type() == typeid(txin_to_key), false, "wrong miner transaction");
+  CHECK_AND_ASSERT_MES(bl.miner_tx.vin.size() == 2, false, "wrong miner transaction");
+  CHECK_AND_ASSERT_MES(bl.miner_tx.vin[0].type() == typeid(txin_gen), false, "wrong miner transaction");
+  CHECK_AND_ASSERT_MES(bl.miner_tx.vin[1].type() == typeid(txin_to_key), false, "wrong miner transaction");
 
-  const txin_to_key& txin = boost::get<txin_to_key>(bl.miner_tx.vin[0]);
+  const txin_to_key& txin = boost::get<txin_to_key>(bl.miner_tx.vin[1]);
   CHECK_AND_ASSERT_MES(txin.key_offsets.size(), false, "wrong miner transaction");
   kernel.tx_block_timestamp = bl.timestamp;
   return build_kernel(txin.amount, txin.key_offsets[0], txin.k_image, kernel, coindays_weight);
@@ -2341,7 +2342,7 @@ bool blockchain_storage::build_kernel(const block& bl, stake_kernel& kernel, uin
 bool blockchain_storage::build_stake_modifier(crypto::hash& sm)
 {
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
-  //temporary implementation
+  //temporary implementation (to close to beginning atm)
   uint64_t height_for_modifier = 0;
   sm = null_hash;
   if (get_current_blockchain_height() < POS_MODFIFIER_INTERVAL)
@@ -2351,7 +2352,7 @@ bool blockchain_storage::build_stake_modifier(crypto::hash& sm)
     return true;
   }
 
-  uint64_t height_for_modifier = get_current_blockchain_height() - (get_current_blockchain_height() % POS_MODFIFIER_INTERVAL);
+  height_for_modifier = get_current_blockchain_height() - (get_current_blockchain_height() % POS_MODFIFIER_INTERVAL);
   crypto::xor_pod(sm, get_block_hash(m_blocks[height_for_modifier - 4].bl));
   crypto::xor_pod(sm, get_block_hash(m_blocks[height_for_modifier - 6].bl));
   crypto::xor_pod(sm, get_block_hash(m_blocks[height_for_modifier - 8].bl));
@@ -2375,15 +2376,13 @@ bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, co
   
   auto tx_it = m_transactions.find(it->second[kernel.tx_out_global_index].first);
   CHECK_AND_ASSERT_MES(tx_it != m_transactions.end(), false, "internal error: transaction " << it->second[kernel.tx_out_global_index].first << " reffered in index not found");
-  CHECK_AND_ASSERT_MES(m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp >= m_blocks.back().bl.timestamp, false, "wrong coin age");
+  CHECK_AND_ASSERT_MES(m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp <= m_blocks.back().bl.timestamp, false, "wrong coin age");
 
   uint64_t coin_age = m_blocks.back().bl.timestamp - m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp;
   kernel.tx_block_timestamp = m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp;
 
   coindays_weight = get_coinday_weight(amount, coin_age);
-
-  //todo:
-  //kernel.stake_modifier = ???  
+  build_stake_modifier(kernel.stake_modifier);
   return true;
 }
 //------------------------------------------------------------------
@@ -2398,7 +2397,6 @@ bool blockchain_storage::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMA
 
   for (size_t i = 0; i != sp.pos_entries.size(); i++)
   {
-    
     for (uint64_t ts = timstamp_start; ts < timstamp_start + POS_SCAN_WINDOW; ts++)
     {
       stake_kernel sk = AUTO_VAL_INIT(sk);

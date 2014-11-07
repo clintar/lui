@@ -110,7 +110,7 @@ namespace tools
         FIELD(account_data)
       END_SERIALIZE()
     };
-
+    void assign_account(const currency::account_base& acc);
     void generate(const std::string& wallet, const std::string& password);
     void load(const std::string& wallet, const std::string& password);    
     void store();
@@ -172,7 +172,8 @@ namespace tools
 
     //PoS
     bool try_mint_pos();
-
+    //for unit tests
+    friend class test_generator;
   private:
     bool store_keys(const std::string& keys_file_name, const std::string& password);
     void load_keys(const std::string& keys_file_name, const std::string& password);
@@ -194,7 +195,9 @@ namespace tools
     void handle_money_spent2(const currency::block& b, const currency::transaction& in_tx, uint64_t amount, const money_transfer2_details& td, const std::string& recipient, const std::string& recipient_alias);
     std::string get_alias_for_address(const std::string& addr);
     void wallet_transfer_info_from_unconfirmed_transfer_details(const unconfirmed_transfer_details& utd, wallet_rpc::wallet_transfer_info& wti);
-    
+    //pos
+    bool get_pos_entries(currency::COMMAND_RPC_SCAN_POS::request& req);
+    bool prepare_and_sign_pos_block(block& bl_template, const pos_entry& pos_info);
 
     currency::account_base m_account;
     std::string m_wallet_file;
