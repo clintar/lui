@@ -735,16 +735,57 @@ bool wallet2::get_pos_entries(currency::COMMAND_RPC_SCAN_POS::request& req)
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::prepare_and_sign_pos_block(block& bl_template, const pos_entry& pos_info)
+bool wallet2::prepare_and_sign_pos_block(currency::block& b, 
+                                         const currency::pos_entry& pos_info, 
+                                         const crypto::public_key& source_tx_pub_key, 
+                                         uint64_t in_tx_output_index, 
+                                         const std::vector<const crypto::public_key*>& keys_ptrs)
 {
+  //generate coinbase transaction
+  CHECK_AND_ASSERT_MES(b.miner_tx.vin[0].type() == typeid(currency::txin_gen), false, "Wrong output input in transaction");
+  CHECK_AND_ASSERT_MES(b.miner_tx.vin[1].type() == typeid(currency::txin_to_key), false, "Wrong output input in transaction");
+  auto& txin = boost::get<currency::txin_to_key>(b.miner_tx.vin[1]);
+  txin.k_image = pos_info.keyimage;
+  CHECK_AND_ASSERT_MES(b.miner_tx.signatures.size() == 1 && b.miner_tx.signatures[0].size() == 1,
+    false, "Wrong signatures amount in coinbase transacton");
 
+
+
+  //derive secrete key
+  crypto::key_derivation pos_coin_derivation = AUTO_VAL_INIT(pos_coin_derivation);
+  bool r = crypto::generate_key_derivation(source_tx_pub_key,
+    m_account.get_keys().m_view_secret_key,
+    pos_coin_derivation);
+
+  CHECK_AND_ASSERT_MES(r, false, "internal error: pos coin base generator: failed to generate_key_derivation("
+    <<  source_tx_pub_key
+    << ", view secret key: " << m_account.get_keys().m_view_secret_key << ")");
+
+  crypto::secret_key derived_secrete_ephemeral_key = AUTO_VAL_INIT(derived_secrete_ephemeral_key);
+  crypto::derive_secret_key(pos_coin_derivation,
+    in_tx_output_index,
+    m_account.get_keys().m_spend_secret_key,
+    derived_secrete_ephemeral_key);
+
+  // sign block actually in coinbase transaction
+  crypto::hash block_hash = currency::get_block_hash(b);
+
+  crypto::generate_ring_signature(block_hash,
+    boost::get<currency::txin_to_key>(b.miner_tx.vin[0]).k_image,
+    keys_ptrs,
+    derived_secrete_ephemeral_key,
+    0,
+    &b.miner_tx.signatures[0][0]);
+
+  LOG_PRINT_GREEN("Block constructed, sending to core...", LOG_LEVEL_1);
 }
 //----------------------------------------------------------------------------------------------------
 bool wallet2::try_mint_pos()
 {
   currency::COMMAND_RPC_SCAN_POS::request req = AUTO_VAL_INIT(req);
   currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
-  
+  bool r = get_pos_entries(req);
+  CHECK_AND_ASSERT_MES2(r, false, "Failed to get_pos_entries()");
   m_core_proxy->call_COMMAND_RPC_SCAN_POS(req, rsp);
   if (rsp.status == CORE_RPC_STATUS_OK)
   {
@@ -769,59 +810,22 @@ bool wallet2::try_mint_pos()
     res = parse_and_validate_block_from_blob(block_blob, b);
     CHECK_AND_ASSERT_MES(res, false, "Failed to create block template after kernel hash found!");
 
-    //generate coinbase transaction
-    CHECK_AND_ASSERT_MES(b.miner_tx.vin[0].type() == typeid(currency::txin_gen), false, "Wrong output input in transaction");
-    CHECK_AND_ASSERT_MES(b.miner_tx.vin[1].type() == typeid(currency::txin_to_key), false, "Wrong output input in transaction");
-    auto& txin = boost::get<currency::txin_to_key>(b.miner_tx.vin[1]);
-    txin.k_image = req.pos_entries[rsp.index].keyimage;
-    CHECK_AND_ASSERT_MES(b.miner_tx.signatures.size() == 1 && b.miner_tx.signatures[0].size() == 1,
-      false, "Wrong signatures amount in coinbase transacton");
-
-    std::vector<const crypto::public_key*> keys_ptrs;
+      std::vector<const crypto::public_key*> keys_ptrs;
     CHECK_AND_ASSERT_MES(req.pos_entries[rsp.index].wallet_index < m_transfers.size(),
-      false, "Wrong wallet_index at generating coinbase transacton");
+        false, "Wrong wallet_index at generating coinbase transacton");
 
     const auto& target = m_transfers[req.pos_entries[rsp.index].wallet_index].m_tx.vout[m_transfers[req.pos_entries[rsp.index].wallet_index].m_internal_output_index].target;
     CHECK_AND_ASSERT_MES(target.type() == typeid(currency::txout_to_key), false, "wrong type_id in source transaction in coinbase tx");
 
-    CHECK_AND_ASSERT_MES(target.type() == typeid(currency::txout_to_key), false, "wrong out type");
-
     const currency::txout_to_key& txtokey = boost::get<currency::txout_to_key>(target);
     keys_ptrs.push_back(&txtokey.key);
 
-    //derive secrete key
-    crypto::key_derivation pos_coin_derivation = AUTO_VAL_INIT(pos_coin_derivation);
-    bool r = crypto::generate_key_derivation(get_tx_pub_key_from_extra(m_transfers[req.pos_entries[rsp.index].wallet_index].m_tx),
-                                             m_account.get_keys().m_view_secret_key, 
-                                             pos_coin_derivation);
-
-    CHECK_AND_ASSERT_MES(r, false, "internal error: pos coin base generator: failed to generate_key_derivation(" 
-      << get_tx_pub_key_from_extra(m_transfers[req.pos_entries[rsp.index].wallet_index].m_tx) 
-      << ", view secret key: " << m_account.get_keys().m_view_secret_key << ")");
-
-    crypto::secret_key derived_secrete_ephemeral_key = AUTO_VAL_INIT(derived_secrete_ephemeral_key);
-    crypto::derive_secret_key(pos_coin_derivation, 
-                              m_transfers[req.pos_entries[rsp.index].wallet_index].m_internal_output_index, 
-                              m_account.get_keys().m_spend_secret_key, 
-                              derived_secrete_ephemeral_key);
-
-
-
-    crypto::hash coinbase_prefix_hash = currency::get_transaction_prefix_hash(b.miner_tx);
-    crypto::generate_ring_signature(coinbase_prefix_hash, 
-                                    boost::get<currency::txin_to_key>(b.miner_tx.vin[0]).k_image, 
-                                    keys_ptrs, 
-                                    derived_secrete_ephemeral_key,
-                                    0, 
-                                    &b.miner_tx.signatures[0][0]);
-
-    //sign block
-    crypto::generate_signature(get_block_hash(b),
-                               txtokey.key, 
-                               derived_secrete_ephemeral_key,
-                               b.pos_sig);
-
-    LOG_PRINT_GREEN("Block constructed, sending to core...", LOG_LEVEL_1);
+    res = prepare_and_sign_pos_block(b,
+      req.pos_entries[rsp.index],
+      get_tx_pub_key_from_extra(m_transfers[req.pos_entries[rsp.index].wallet_index].m_tx),
+      m_transfers[req.pos_entries[rsp.index].wallet_index].m_internal_output_index,
+      keys_ptrs);
+    CHECK_AND_ASSERT_MES(res, false, "Failed to prepare_and_sign_pos_block");
     
     currency::COMMAND_RPC_SUBMITBLOCK::request subm_req = AUTO_VAL_INIT(subm_req);
     currency::COMMAND_RPC_SUBMITBLOCK::response subm_rsp = AUTO_VAL_INIT(subm_rsp);

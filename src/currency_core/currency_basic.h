@@ -309,7 +309,7 @@ namespace currency
     uint64_t index;
     crypto::key_image keyimage;
     //not for serialization
-    uint64_t wallet_index;
+    //uint64_t wallet_index;
 
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(amount)

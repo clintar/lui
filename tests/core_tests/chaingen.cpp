@@ -130,16 +130,17 @@ bool test_generator::construct_block(currency::block& blk,
 
   // build block chain
   blockchain_vector blocks;
+  outputs_index oi;
   get_block_chain(blocks, blk.prev_id, std::numeric_limits<size_t>::max());
 
   //pos
-  std::list<tools::wallet2> wallets;
+  std::vector<tools::wallet2> wallets;
+
   size_t won_walled_index = 0;
   pos_entry pe = AUTO_VAL_INIT(pe);
   if (coin_stake_sources.size())
   {
     //build outputs index
-    outputs_index oi;
     build_outputs_indext_for_chain(blocks, oi);
 
     //build wallets
@@ -219,7 +220,7 @@ bool test_generator::construct_block(currency::block& blk,
   else
   {
     //need to build pos block
-    bool r = sign_block(blk, coin_stake_sources, blocks);
+    bool r = sign_block(blk, pe, wallets[won_walled_index], blocks, oi);
     CHECK_AND_ASSERT_MES(r, false, "Failed to find_kernel_and_sign()");
   }
 
@@ -233,9 +234,40 @@ bool test_generator::construct_block(currency::block& blk,
   return true;
 }
 
+bool test_generator::sign_block(currency::block& b, 
+                                pos_entry& pe, 
+                                tools::wallet2& w, 
+                                const std::vector<const block_info*>& blocks, 
+                                const outputs_index& oi)
+{
+  uint64_t h = 0;
+  uint64_t out_i = 0;
+  const transaction * pts = nullptr;
+  crypto::public_key source_tx_pub_key = null_pkey;
+  crypto::public_key out_key = null_pkey;
+
+  bool r = get_output_details_by_global_index(blocks,
+    oi,
+    pe.amount,
+    pe.index, 
+    h,
+    pts,
+    out_i,
+    source_tx_pub_key,
+    out_key);
+  CHECK_AND_ASSERT_THROW_MES(r, false, "Failed to get_output_details_by_global_index()");
+
+  std::vector<const crypto::public_key*> keys_ptrs;
+  keys_ptrs.push_back(&out_key);
+  r = w.prepare_and_sign_pos_block(b, pe, source_tx_pub_key, out_i, keys_ptrs);
+  CHECK_AND_ASSERT_THROW_MES(r, false, "Failed to prepare_and_sign_pos_block()");
+
+  return true;
+}
+
 bool test_generator::build_wallets(const blockchain_vector& blocks, 
                                    const std::list<currency::account_base>& accs, 
-                                   std::list<tools::wallet2>& wallets)
+                                   std::vector<tools::wallet2>& wallets)
 {
   //build wallets
   wallets.clear();
@@ -268,16 +300,13 @@ bool test_generator::build_wallets(const blockchain_vector& blocks,
   }
   return true;
 }
-
-bool build_kernel(uint64_t amount,
-                  uint64_t global_index,
-                  const crypto::key_image& ki,
-                  stake_kernel& kernel,
-                  uint64_t& coindays_weight,
-                  const test_generator::blockchain_vector& blck_chain,
-                  const test_generator::outputs_index& indexes)
+bool test_generator::find_kernel(const std::list<currency::account_base>& accs,
+  const blockchain_vector& blck_chain,
+  const outputs_index& indexes,
+  std::vector<tools::wallet2>& wallets,
+  currency::pos_entry& pe,
+  size_t& found_wallet_index)
 {
-
   uint64_t timstamp_start = 0;
   wide_difficulty_type basic_diff = 0;
   timstamp_start = blck_chain.back()->b.timestamp;
@@ -297,13 +326,13 @@ bool build_kernel(uint64_t amount,
       {
         stake_kernel sk = AUTO_VAL_INIT(sk);
         uint64_t coindays_weight = 0;
-        build_kernel(scan_pos_entries.pos_entries[i].amount, 
-                     scan_pos_entries.pos_entries[i].index, 
-                     scan_pos_entries.pos_entries[i].keyimage, 
-                     sk, 
-                     coindays_weight, 
-                     blck_chain, 
-                     indexes);
+        build_kernel(scan_pos_entries.pos_entries[i].amount,
+          scan_pos_entries.pos_entries[i].index,
+          scan_pos_entries.pos_entries[i].keyimage,
+          sk,
+          coindays_weight,
+          blck_chain,
+          indexes);
         crypto::hash kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
         wide_difficulty_type this_coin_diff = basic_diff / coindays_weight;
         if (!check_hash(kernel_hash, this_coin_diff))
@@ -311,8 +340,8 @@ bool build_kernel(uint64_t amount,
         else
         {
           //found kernel
-          LOG_PRINT_GREEN("Found kernel: amount=" << scan_pos_entries.pos_entries[i].amount 
-            << ", index=" << scan_pos_entries.pos_entries[i].index 
+          LOG_PRINT_GREEN("Found kernel: amount=" << scan_pos_entries.pos_entries[i].amount
+            << ", index=" << scan_pos_entries.pos_entries[i].index
             << ", key_image" << scan_pos_entries.pos_entries[i].keyimage, LOG_LEVEL_0);
           pe = scan_pos_entries.pos_entries[i];
           found_wallet_index = i;
@@ -322,8 +351,6 @@ bool build_kernel(uint64_t amount,
     }
     i++;
   }
-
-
   return false;
 }
 //------------------------------------------------------------------
@@ -334,6 +361,40 @@ bool test_generator::build_outputs_indext_for_chain(const blockchain_vector& blo
       for (size_t out_i = 0; out_i != blocks[h]->m_transactions[tx_index].vout.size(); out_i++)
         index[blocks[h]->m_transactions[tx_index].vout[out_i].amount].push_back(std::tuple<size_t, size_t, size_t>(h, tx_index, out_i));
 
+  return true;
+}
+//------------------------------------------------------------------
+bool test_generator::get_output_details_by_global_index(const test_generator::blockchain_vector& blck_chain,
+                                                        const test_generator::outputs_index& indexes,
+                                                        uint64_t amount,
+                                                        uint64_t global_index,
+                                                        uint64_t& h,
+                                                        const transaction* tx,
+                                                        uint64_t& tx_out_index,
+                                                        crypto::public_key& tx_pub_key,
+                                                        crypto::public_key& output_key)
+{
+  auto it = indexes.find(amount);
+  CHECK_AND_ASSERT_MES(it != indexes.end(), false, "Failed to find amount in coin stake " << amount);
+
+  CHECK_AND_ASSERT_MES(it->second.size() > global_index, false, "wrong key offset " << global_index  << " with amount kernel_in.amount");
+
+  h = std::get<0>(it->second[global_index]);
+  size_t tx_index = std::get<1>(it->second[global_index]);
+  tx_out_index = std::get<2>(it->second[global_index]);
+
+  CHECK_AND_ASSERT_THROW_MES(h < blck_chain.size(), "std::get<0>(it->second[kernel.tx_out_global_index]) < blck_chain.size()");
+  CHECK_AND_ASSERT_THROW_MES(tx_index < blck_chain[h]->m_transactions.size(), "tx_index < blck_chain[h].m_transactions.size()");
+  CHECK_AND_ASSERT_THROW_MES(tx_out_index < blck_chain[h]->m_transactions[tx_index].vout.size(), "tx_index < blck_chain[h].m_transactions.size()");
+  tx = &blck_chain[h]->m_transactions[tx_index];
+  tx_pub_key = get_tx_pub_key_from_extra(blck_chain[h]->m_transactions[tx_index]);
+  CHECK_AND_ASSERT_THROW_MES(blck_chain[h]->m_transactions[tx_index].vout[tx_out_index].target.type() == typeid(currency::txout_to_key),
+    "blck_chain[h]->m_transactions[tx_index].vout[tx_out_index].target.type() == typeid(currency::txout_to_key)");
+
+  CHECK_AND_ASSERT_THROW_MES(blck_chain[h]->m_transactions[tx_index].vout[tx_out_index].amount == amount,
+    "blck_chain[h]->m_transactions[tx_index].vout[tx_out_index].amount == amount");
+
+  output_key = boost::get<currency::txout_to_key>(blck_chain[h]->m_transactions[tx_index].vout[tx_out_index].target).key;
   return true;
 }
 //------------------------------------------------------------------
@@ -351,18 +412,23 @@ bool test_generator::build_kernel(uint64_t amount,
   kernel.kimage = ki;
 
   //get block related with coinstake source transaction
-  auto it = indexes.find(amount);
-  CHECK_AND_ASSERT_MES(it != indexes.end(), false, "Failed to find amount in coin stake " << amount);
+  uint64_t h = 0; 
+  uint64_t out_i = 0;
+  const transaction * pts = nullptr;
+  crypto::public_key source_tx_pub_key = null_pkey;
+  crypto::public_key out_key = null_pkey;
 
-  CHECK_AND_ASSERT_MES(it->second.size() > kernel.tx_out_global_index, false, "wrong key offset " << kernel.tx_out_global_index << " with amount kernel_in.amount");
-  
-  size_t h = std::get<0>(it->second[kernel.tx_out_global_index]);
-  size_t tx_index = std::get<1>(it->second[kernel.tx_out_global_index]);
-  size_t out_i = std::get<2>(it->second[kernel.tx_out_global_index]);
+  bool r = get_output_details_by_global_index(blck_chain, 
+                                     indexes, 
+                                     amount, 
+                                     global_index, 
+                                     h, 
+                                     pts, 
+                                     out_i, 
+                                     source_tx_pub_key, 
+                                     out_key);
+  CHECK_AND_ASSERT_THROW_MES(r, false, "Failed to get_output_details_by_global_index()");
 
-  CHECK_AND_ASSERT_THROW_MES(h < blck_chain.size(), "std::get<0>(it->second[kernel.tx_out_global_index]) < blck_chain.size()");
-  CHECK_AND_ASSERT_THROW_MES(tx_index < blck_chain[h]->m_transactions.size(), "tx_index < blck_chain[h].m_transactions.size()");
-  CHECK_AND_ASSERT_THROW_MES(out_i < blck_chain[h]->m_transactions[tx_index].vout.size(), "tx_index < blck_chain[h].m_transactions.size()");
 
   CHECK_AND_ASSERT_THROW_MES(blck_chain[h]->b.timestamp <= blck_chain.back()->b.timestamp, false, "wrong coin age");
 
@@ -393,7 +459,7 @@ bool test_generator::build_stake_modifier(crypto::hash& sm, const test_generator
   return true;
 }
 
-bool test_generator::sign_block(block& bock, pos_entry& pe, wallet2& w, const std::vector<const block_info*>& blocks)
+bool test_generator::sign_block(currency::block& bock, pos_entry& pe, wallet2& w, const std::vector<const block_info*>& blocks)
 {
 
 }
@@ -429,7 +495,7 @@ currency::wide_difficulty_type test_generator::get_difficulty_for_next_block(con
 }
 
 
-bool test_generator::find_nounce(block& blk, std::vector<const block_info*>& blocks, wide_difficulty_type dif, uint64_t height)
+bool test_generator::find_nounce(currency::block& blk, std::vector<const block_info*>& blocks, wide_difficulty_type dif, uint64_t height)
 {
   if(height != blocks.size())
     throw std::runtime_error("wrong height in find_nounce");
@@ -487,7 +553,7 @@ bool test_generator::construct_block(currency::block& blk,
   return construct_block(blk, height, prev_id, miner_acc, timestamp, already_generated_coins, block_sizes, tx_list, ai);
 }
 
-bool test_generator::construct_block_manually(block& blk, const block& prev_block, const account_base& miner_acc,
+bool test_generator::construct_block_manually(currency::block& blk, const block& prev_block, const account_base& miner_acc,
                                               int actual_params/* = bf_none*/, uint8_t major_ver/* = 0*/,
                                               uint8_t minor_ver/* = 0*/, uint64_t timestamp/* = 0*/,
                                               const crypto::hash& prev_id/* = crypto::hash()*/, const wide_difficulty_type& diffic/* = 1*/,
@@ -907,7 +973,7 @@ bool find_block_chain(const std::vector<test_event_entry>& events, std::vector<c
     std::unordered_map<crypto::hash, const block*> block_index;
     BOOST_FOREACH(const test_event_entry& ev, events)
     {
-        if (typeid(block) == ev.type())
+        if (typeid(currency::block) == ev.type())
         {
             const block* blk = &boost::get<block>(ev);
             block_index[get_block_hash(*blk)] = blk;

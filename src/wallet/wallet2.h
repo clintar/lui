@@ -197,7 +197,12 @@ namespace tools
     void wallet_transfer_info_from_unconfirmed_transfer_details(const unconfirmed_transfer_details& utd, wallet_rpc::wallet_transfer_info& wti);
     //pos
     bool get_pos_entries(currency::COMMAND_RPC_SCAN_POS::request& req);
-    bool prepare_and_sign_pos_block(block& bl_template, const pos_entry& pos_info);
+    bool prepare_and_sign_pos_block(currency::block& b,
+      const currency::pos_entry& pos_info,
+      const crypto::public_key& source_tx_pub_key,
+      uint64_t in_tx_output_index,
+      const std::vector<const crypto::public_key*>& keys_ptrs);
+
 
     currency::account_base m_account;
     std::string m_wallet_file;
