@@ -60,6 +60,8 @@ namespace tools
     }
   };
 
+  class test_generator;
+
   class wallet2
   {
     wallet2(const wallet2&) : m_run(true), m_callback(0) {};
@@ -174,11 +176,26 @@ namespace tools
     bool try_mint_pos();
     //for unit tests
     friend class test_generator;
+    
+    //next functions in public area only because of test_generator
+    //TODO: Need refactoring - remove it back to private zone 
+    bool prepare_and_sign_pos_block(currency::block& b,
+      const currency::pos_entry& pos_info,
+      const crypto::public_key& source_tx_pub_key,
+      uint64_t in_tx_output_index,
+      const std::vector<const crypto::public_key*>& keys_ptrs);
+    void process_new_blockchain_entry(const currency::block& b, 
+      currency::block_complete_entry& bche, 
+      crypto::hash& bl_id, 
+      uint64_t height);
+    bool get_pos_entries(currency::COMMAND_RPC_SCAN_POS::request& req);
+
+
+
   private:
     bool store_keys(const std::string& keys_file_name, const std::string& password);
     void load_keys(const std::string& keys_file_name, const std::string& password);
     void process_new_transaction(const currency::transaction& tx, uint64_t height, const currency::block& b);
-    void process_new_blockchain_entry(const currency::block& b, currency::block_complete_entry& bche, crypto::hash& bl_id, uint64_t height);
     void detach_blockchain(uint64_t height);
     void get_short_chain_history(std::list<crypto::hash>& ids);
     bool is_tx_spendtime_unlocked(uint64_t unlock_time) const;
@@ -195,13 +212,6 @@ namespace tools
     void handle_money_spent2(const currency::block& b, const currency::transaction& in_tx, uint64_t amount, const money_transfer2_details& td, const std::string& recipient, const std::string& recipient_alias);
     std::string get_alias_for_address(const std::string& addr);
     void wallet_transfer_info_from_unconfirmed_transfer_details(const unconfirmed_transfer_details& utd, wallet_rpc::wallet_transfer_info& wti);
-    //pos
-    bool get_pos_entries(currency::COMMAND_RPC_SCAN_POS::request& req);
-    bool prepare_and_sign_pos_block(currency::block& b,
-      const currency::pos_entry& pos_info,
-      const crypto::public_key& source_tx_pub_key,
-      uint64_t in_tx_output_index,
-      const std::vector<const crypto::public_key*>& keys_ptrs);
 
 
     currency::account_base m_account;

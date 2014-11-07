@@ -134,7 +134,7 @@ bool test_generator::construct_block(currency::block& blk,
   get_block_chain(blocks, blk.prev_id, std::numeric_limits<size_t>::max());
 
   //pos
-  std::vector<tools::wallet2> wallets;
+  std::vector<std::shared_ptr<tools::wallet2> > wallets;
 
   size_t won_walled_index = 0;
   pos_entry pe = AUTO_VAL_INIT(pe);
@@ -255,12 +255,12 @@ bool test_generator::sign_block(currency::block& b,
     out_i,
     source_tx_pub_key,
     out_key);
-  CHECK_AND_ASSERT_THROW_MES(r, false, "Failed to get_output_details_by_global_index()");
+  CHECK_AND_ASSERT_THROW_MES(r, "Failed to get_output_details_by_global_index()");
 
   std::vector<const crypto::public_key*> keys_ptrs;
   keys_ptrs.push_back(&out_key);
   r = w.prepare_and_sign_pos_block(b, pe, source_tx_pub_key, out_i, keys_ptrs);
-  CHECK_AND_ASSERT_THROW_MES(r, false, "Failed to prepare_and_sign_pos_block()");
+  CHECK_AND_ASSERT_THROW_MES(r,"Failed to prepare_and_sign_pos_block()");
 
   return true;
 }
@@ -294,8 +294,7 @@ bool test_generator::build_wallets(const blockchain_vector& blocks,
         bce.txs.push_back(currency::tx_to_blob(tx));
       }
 
-      bool r = w.process_new_blockchain_entry(b->b, bce, currency::get_block_hash(b->b), height);
-      CHECK_AND_ASSERT_THROW_MES(r, "Failed to process_new_blockchain_entry()");
+      w.process_new_blockchain_entry(b->b, bce, currency::get_block_hash(b->b), height);
     }
   }
   return true;
@@ -349,7 +348,7 @@ bool test_generator::find_kernel(const std::list<currency::account_base>& accs,
         }
       }
     }
-    i++;
+    
   }
   return false;
 }
@@ -427,10 +426,10 @@ bool test_generator::build_kernel(uint64_t amount,
                                      out_i, 
                                      source_tx_pub_key, 
                                      out_key);
-  CHECK_AND_ASSERT_THROW_MES(r, false, "Failed to get_output_details_by_global_index()");
+  CHECK_AND_ASSERT_THROW_MES(r,"Failed to get_output_details_by_global_index()");
 
 
-  CHECK_AND_ASSERT_THROW_MES(blck_chain[h]->b.timestamp <= blck_chain.back()->b.timestamp, false, "wrong coin age");
+  CHECK_AND_ASSERT_THROW_MES(blck_chain[h]->b.timestamp <= blck_chain.back()->b.timestamp, "wrong coin age");
 
   uint64_t coin_age = blck_chain.back()->b.timestamp - blck_chain[h]->b.timestamp;
   kernel.tx_block_timestamp = blck_chain[h]->b.timestamp;
@@ -447,7 +446,7 @@ bool test_generator::build_stake_modifier(crypto::hash& sm, const test_generator
   if (blck_chain.size() < POS_MODFIFIER_INTERVAL)
   {
     bool r = string_tools::parse_tpod_from_hex_string(POS_STARTER_MODFIFIER, sm);
-    CHECK_AND_ASSERT_MES(r, false, "Failed to parse POS_STARTER_MODFIFIER");
+    CHECK_AND_ASSERT_THROW_MES(r, "Failed to parse POS_STARTER_MODFIFIER");
     return true;
   }
 
@@ -457,11 +456,6 @@ bool test_generator::build_stake_modifier(crypto::hash& sm, const test_generator
   crypto::xor_pod(sm, get_block_hash(blck_chain[height_for_modifier - 8]->b));
 
   return true;
-}
-
-bool test_generator::sign_block(currency::block& bock, pos_entry& pe, wallet2& w, const std::vector<const block_info*>& blocks)
-{
-
 }
 
 bool test_generator::call_COMMAND_RPC_SCAN_POS(const currency::COMMAND_RPC_SCAN_POS::request& req, currency::COMMAND_RPC_SCAN_POS::response& rsp)
@@ -553,48 +547,48 @@ bool test_generator::construct_block(currency::block& blk,
   return construct_block(blk, height, prev_id, miner_acc, timestamp, already_generated_coins, block_sizes, tx_list, ai);
 }
 
-bool test_generator::construct_block_manually(currency::block& blk, const block& prev_block, const account_base& miner_acc,
-                                              int actual_params/* = bf_none*/, uint8_t major_ver/* = 0*/,
-                                              uint8_t minor_ver/* = 0*/, uint64_t timestamp/* = 0*/,
-                                              const crypto::hash& prev_id/* = crypto::hash()*/, const wide_difficulty_type& diffic/* = 1*/,
-                                              const transaction& miner_tx/* = transaction()*/,
-                                              const std::vector<crypto::hash>& tx_hashes/* = std::vector<crypto::hash>()*/,
-                                              size_t txs_sizes/* = 0*/)
-{
-  size_t height = get_block_height(prev_block) + 1;
-  blk.major_version = actual_params & bf_major_ver ? major_ver : CURRENT_BLOCK_MAJOR_VERSION;
-  blk.minor_version = actual_params & bf_minor_ver ? minor_ver : CURRENT_BLOCK_MINOR_VERSION;
-  blk.timestamp     = actual_params & bf_timestamp ? timestamp : (height > 10 ? prev_block.timestamp + DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN: prev_block.timestamp + DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN-DIFF_UP_TIMESTAMP_DELTA); // Keep difficulty unchanged
-  blk.prev_id       = actual_params & bf_prev_id   ? prev_id   : get_block_hash(prev_block);
-  blk.tx_hashes     = actual_params & bf_tx_hashes ? tx_hashes : std::vector<crypto::hash>();
-
-  
-  uint64_t already_generated_coins = get_already_generated_coins(prev_block);
-  std::vector<size_t> block_sizes;
-  get_last_n_block_sizes(block_sizes, get_block_hash(prev_block), CURRENCY_REWARD_BLOCKS_WINDOW);
-  if (actual_params & bf_miner_tx)
-  {
-    blk.miner_tx = miner_tx;
-  }
-  else
-  {
-    size_t current_block_size = txs_sizes + get_object_blobsize(blk.miner_tx);
-    // TODO: This will work, until size of constructed block is less then CURRENCY_BLOCK_GRANTED_FULL_REWARD_ZONE
-    if (!construct_miner_tx(height, misc_utils::median(block_sizes), already_generated_coins, current_block_size, 0, miner_acc.get_keys().m_account_address, blk.miner_tx, blobdata(), 1))
-      return false;
-  }
-
-  //blk.tree_root_hash = get_tx_tree_hash(blk);
-  std::vector<const block_info*> blocks;
-  get_block_chain(blocks, blk.prev_id, std::numeric_limits<size_t>::max());
-
-  wide_difficulty_type a_diffic = actual_params & bf_diffic ? diffic : get_difficulty_for_next_block(blocks);
-  find_nounce(blk, blocks, a_diffic, height);
-
-  add_block(blk, txs_sizes, block_sizes, already_generated_coins, blocks.size() ? blocks.back()->cumul_difficulty + a_diffic: a_diffic);
-
-  return true;
-}
+// bool test_generator::construct_block_manually(currency::block& blk, const block& prev_block, const account_base& miner_acc,
+//                                               int actual_params/* = bf_none*/, uint8_t major_ver/* = 0*/,
+//                                               uint8_t minor_ver/* = 0*/, uint64_t timestamp/* = 0*/,
+//                                               const crypto::hash& prev_id/* = crypto::hash()*/, const wide_difficulty_type& diffic/* = 1*/,
+//                                               const transaction& miner_tx/* = transaction()*/,
+//                                               const std::vector<crypto::hash>& tx_hashes/* = std::vector<crypto::hash>()*/,
+//                                               size_t txs_sizes/* = 0*/)
+// {
+//   size_t height = get_block_height(prev_block) + 1;
+//   blk.major_version = actual_params & bf_major_ver ? major_ver : CURRENT_BLOCK_MAJOR_VERSION;
+//   blk.minor_version = actual_params & bf_minor_ver ? minor_ver : CURRENT_BLOCK_MINOR_VERSION;
+//   blk.timestamp     = actual_params & bf_timestamp ? timestamp : (height > 10 ? prev_block.timestamp + DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN: prev_block.timestamp + DIFFICULTY_BLOCKS_ESTIMATE_TIMESPAN-DIFF_UP_TIMESTAMP_DELTA); // Keep difficulty unchanged
+//   blk.prev_id       = actual_params & bf_prev_id   ? prev_id   : get_block_hash(prev_block);
+//   blk.tx_hashes     = actual_params & bf_tx_hashes ? tx_hashes : std::vector<crypto::hash>();
+// 
+//   
+//   uint64_t already_generated_coins = get_already_generated_coins(prev_block);
+//   std::vector<size_t> block_sizes;
+//   get_last_n_block_sizes(block_sizes, get_block_hash(prev_block), CURRENCY_REWARD_BLOCKS_WINDOW);
+//   if (actual_params & bf_miner_tx)
+//   {
+//     blk.miner_tx = miner_tx;
+//   }
+//   else
+//   {
+//     size_t current_block_size = txs_sizes + get_object_blobsize(blk.miner_tx);
+//     // TODO: This will work, until size of constructed block is less then CURRENCY_BLOCK_GRANTED_FULL_REWARD_ZONE
+//     if (!construct_miner_tx(height, misc_utils::median(block_sizes), already_generated_coins, current_block_size, 0, miner_acc.get_keys().m_account_address, blk.miner_tx, blobdata(), 1))
+//       return false;
+//   }
+// 
+//   //blk.tree_root_hash = get_tx_tree_hash(blk);
+//   std::vector<const block_info*> blocks;
+//   get_block_chain(blocks, blk.prev_id, std::numeric_limits<size_t>::max());
+// 
+//   wide_difficulty_type a_diffic = actual_params & bf_diffic ? diffic : get_difficulty_for_next_block(blocks);
+//   find_nounce(blk, blocks, a_diffic, height);
+// 
+//   add_block(blk, txs_sizes, block_sizes, already_generated_coins, blocks.size() ? blocks.back()->cumul_difficulty + a_diffic: a_diffic, );
+// 
+//   return true;
+// }
 
 bool test_generator::construct_block_manually_tx(currency::block& blk, const currency::block& prev_block,
                                                  const currency::account_base& miner_acc,

@@ -240,7 +240,7 @@ public:
                      std::vector<tools::wallet2>& wallets);
   
   bool sign_block(currency::block& b, 
-                  pos_entry& pe, 
+                  currency::pos_entry& pe, 
                   tools::wallet2& w, 
                   const blockchain_vector& blocks, 
                   const outputs_index& oi);
@@ -250,7 +250,7 @@ public:
                                           uint64_t amount,
                                           uint64_t global_index,
                                           uint64_t& h,
-                                          const transaction* tx,
+                                          const currency::transaction* tx,
                                           uint64_t& tx_out_index,
                                           crypto::public_key& tx_pub_key,
                                           crypto::public_key& output_key);
