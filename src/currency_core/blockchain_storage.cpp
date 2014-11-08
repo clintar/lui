@@ -2420,17 +2420,6 @@ bool blockchain_storage::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMA
   rsp.status = CORE_RPC_STATUS_NOT_FOUND;
   return false;
 }
-//------------------------------------------------------------------
-uint64_t blockchain_storage::get_coinday_weight(uint64_t amount, uint64_t coin_age)
-{
-  if (coin_age < m_pos_config.min_coinage)
-    return 0;
-  else if (coin_age > m_pos_config.max_coinage)
-    coin_age = m_pos_config.max_coinage;
-
-  return coin_age / (60 * 60 * 24);
-}
-//------------------------------------------------------------------
 bool blockchain_storage::is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp)
 {
   if (source_tx_block_timestamp > last_block_timestamp)

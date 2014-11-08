@@ -139,7 +139,6 @@ namespace currency
     bool validate_pos_block(const block& b);
     bool validate_pos_block(const block& b, wide_difficulty_type basic_diff);
     bool validate_pos_block(const block& b, wide_difficulty_type basic_diff, uint64_t& coin_age, wide_difficulty_type& final_diff, crypto::hash& proof_hash);
-    uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age);
     bool is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp);
     void set_pos_config(const pos_config& pc);
 

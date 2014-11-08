@@ -197,6 +197,7 @@ public:
   //               amount             vec_ind, tx_index, out index in tx
   typedef std::map<uint64_t, std::vector<std::tuple<size_t, size_t, size_t> > > outputs_index;
   typedef std::vector<const block_info*> blockchain_vector;
+  typedef std::vector<std::shared_ptr<tools::wallet2> > wallets_vector;
 
 
   enum block_fields
@@ -231,13 +232,13 @@ public:
   bool find_kernel(const std::list<currency::account_base>& accs,
                    const blockchain_vector& blck_chain,
                    const outputs_index& indexes,
-                   std::vector<tools::wallet2>& wallets,
+                   wallets_vector& wallets,
                    currency::pos_entry& pe,
                    size_t& found_wallet_index);
 
   bool build_wallets(const blockchain_vector& blocks,
                      const std::list<currency::account_base>& accs,
-                     std::vector<tools::wallet2>& wallets);
+                     wallets_vector& wallets);
   
   bool sign_block(currency::block& b, 
                   currency::pos_entry& pe, 

@@ -78,6 +78,18 @@ namespace currency
                                                                             pos_entry());
   }*/
   //---------------------------------------------------------------
+  uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age)
+  {
+
+/*    if (coin_age < m_pos_config.min_coinage)
+      return 0;
+    else if (coin_age > m_pos_config.max_coinage)
+      coin_age = m_pos_config.max_coinage;
+*/
+    return coin_age / (60 * 60 * 24);
+  }
+  //------------------------------------------------------------------
+
   bool construct_miner_tx(size_t height, size_t median_size, uint64_t already_generated_coins, 
                                                              size_t current_block_size, 
                                                              uint64_t fee, 
