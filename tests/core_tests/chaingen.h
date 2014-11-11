@@ -196,6 +196,8 @@ public:
 
   //               amount             vec_ind, tx_index, out index in tx
   typedef std::map<uint64_t, std::vector<std::tuple<size_t, size_t, size_t> > > outputs_index;
+  typedef std::unordered_map<crypto::hash, std::vector<uint64_t> > tx_global_indexes;
+
   typedef std::vector<const block_info*> blockchain_vector;
   typedef std::vector<std::shared_ptr<tools::wallet2> > wallets_vector;
 
@@ -238,6 +240,7 @@ public:
 
   bool build_wallets(const blockchain_vector& blocks,
                      const std::list<currency::account_base>& accs,
+                     const tx_global_indexes& txs_outs,
                      wallets_vector& wallets);
   
   bool sign_block(currency::block& b, 
@@ -262,7 +265,7 @@ public:
   uint64_t get_already_generated_coins(const currency::block& blk) const;
   currency::wide_difficulty_type get_block_difficulty(const crypto::hash& blk_id) const;
 
-  bool test_generator::build_outputs_indext_for_chain(const std::vector<const block_info*>& blocks, outputs_index& index);
+  bool test_generator::build_outputs_indext_for_chain(const std::vector<const block_info*>& blocks, outputs_index& index, tx_global_indexes& txs_outs);
 
 
   void add_block(const currency::block& blk, size_t tsx_size, std::vector<size_t>& block_sizes, uint64_t already_generated_coins, currency::wide_difficulty_type cum_diff, const std::list<currency::transaction>& tx_list);

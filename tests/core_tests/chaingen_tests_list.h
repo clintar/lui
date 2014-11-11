@@ -17,6 +17,7 @@
 #include "mixin_attr.h"
 #include "get_random_outs.h"
 #include "pruning_ring_signatures.h"
+#include "pos_basic_tests.h"
 /************************************************************************/
 /*                                                                      */
 /************************************************************************/

@@ -746,7 +746,7 @@ bool wallet2::prepare_and_sign_pos_block(currency::block& b,
   CHECK_AND_ASSERT_MES(b.miner_tx.vin[1].type() == typeid(currency::txin_to_key), false, "Wrong output input in transaction");
   auto& txin = boost::get<currency::txin_to_key>(b.miner_tx.vin[1]);
   txin.k_image = pos_info.keyimage;
-  CHECK_AND_ASSERT_MES(b.miner_tx.signatures.size() == 1 && b.miner_tx.signatures[0].size() == 1,
+  CHECK_AND_ASSERT_MES(b.miner_tx.signatures.size() == 1 && b.miner_tx.signatures[0].size() == txin.key_offsets.size(),
     false, "Wrong signatures amount in coinbase transacton");
 
 
@@ -771,13 +771,14 @@ bool wallet2::prepare_and_sign_pos_block(currency::block& b,
   crypto::hash block_hash = currency::get_block_hash(b);
 
   crypto::generate_ring_signature(block_hash,
-    boost::get<currency::txin_to_key>(b.miner_tx.vin[0]).k_image,
+    txin.k_image,
     keys_ptrs,
     derived_secrete_ephemeral_key,
     0,
     &b.miner_tx.signatures[0][0]);
 
   LOG_PRINT_GREEN("Block constructed, sending to core...", LOG_LEVEL_1);
+  return true;
 }
 //----------------------------------------------------------------------------------------------------
 bool wallet2::try_mint_pos()
@@ -785,7 +786,7 @@ bool wallet2::try_mint_pos()
   currency::COMMAND_RPC_SCAN_POS::request req = AUTO_VAL_INIT(req);
   currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
   bool r = get_pos_entries(req);
-  CHECK_AND_ASSERT_MES2(r, false, "Failed to get_pos_entries()");
+  CHECK_AND_ASSERT_MES(r, false, "Failed to get_pos_entries()");
   m_core_proxy->call_COMMAND_RPC_SCAN_POS(req, rsp);
   if (rsp.status == CORE_RPC_STATUS_OK)
   {

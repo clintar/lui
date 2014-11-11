@@ -86,7 +86,7 @@ namespace currency
     else if (coin_age > m_pos_config.max_coinage)
       coin_age = m_pos_config.max_coinage;
 */
-    return coin_age / (60 * 60 * 24);
+    return 1;// coin_age / (60 * 60 * 24);
   }
   //------------------------------------------------------------------
 
@@ -129,6 +129,7 @@ namespace currency
       tx.vin.push_back(posin);
       //reserve place for ring signature
       tx.signatures.resize(1);
+      tx.signatures[0].resize(posin.key_offsets.size());
     }
 
     uint64_t block_reward;

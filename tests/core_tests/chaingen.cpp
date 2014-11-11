@@ -131,6 +131,7 @@ bool test_generator::construct_block(currency::block& blk,
   // build block chain
   blockchain_vector blocks;
   outputs_index oi;
+  tx_global_indexes txs_outs;
   get_block_chain(blocks, blk.prev_id, std::numeric_limits<size_t>::max());
 
   //pos
@@ -141,10 +142,10 @@ bool test_generator::construct_block(currency::block& blk,
   if (coin_stake_sources.size())
   {
     //build outputs index
-    build_outputs_indext_for_chain(blocks, oi);
+    build_outputs_indext_for_chain(blocks, oi, txs_outs);
 
     //build wallets
-    build_wallets(blocks, coin_stake_sources, wallets);
+    build_wallets(blocks, coin_stake_sources, txs_outs, wallets);
 
     bool r = find_kernel(coin_stake_sources, blocks, oi, wallets, pe, won_walled_index);
     CHECK_AND_ASSERT_THROW_MES(r, "failed to find_kernel ");
@@ -207,7 +208,7 @@ bool test_generator::construct_block(currency::block& blk,
 
   //blk.tree_root_hash = get_tx_tree_hash(blk);
 
-  wide_difficulty_type a_diffic = get_difficulty_for_next_block(blocks);
+  wide_difficulty_type a_diffic = get_difficulty_for_next_block(blocks, !static_cast<bool>(coin_stake_sources.size()));
   CHECK_AND_ASSERT_MES(a_diffic, false, "get_difficulty_for_next_block for test blocks returned 0!");
   // Nonce search...
   blk.nonce = 0;
@@ -267,14 +268,34 @@ bool test_generator::sign_block(currency::block& b,
 
 bool test_generator::build_wallets(const blockchain_vector& blocks, 
                                    const std::list<currency::account_base>& accs, 
+                                   const tx_global_indexes& txs_outs,
                                    wallets_vector& wallets)
 {
+  struct stub_core_proxy: public tools::i_core_proxy
+  {
+    const tx_global_indexes& m_txs_outs;
+    stub_core_proxy(const tx_global_indexes& txs_outs) : m_txs_outs(txs_outs)
+    {}
+    virtual bool call_COMMAND_RPC_GET_TX_GLOBAL_OUTPUTS_INDEXES(const currency::COMMAND_RPC_GET_TX_GLOBAL_OUTPUTS_INDEXES::request& rqt, currency::COMMAND_RPC_GET_TX_GLOBAL_OUTPUTS_INDEXES::response& rsp)
+    {
+      auto it = m_txs_outs.find(rqt.txid);
+      CHECK_AND_ASSERT_THROW_MES(it != m_txs_outs.end(), "tx not found");
+      rsp.status = CORE_RPC_STATUS_OK;
+      rsp.o_indexes = it->second;
+      return true; 
+    }
+  };
+
+  shared_ptr<tools::i_core_proxy> tmp_proxy(new stub_core_proxy(txs_outs));
+
   //build wallets
   wallets.clear();
   for (auto a : accs)
   {
     wallets.push_back(shared_ptr<tools::wallet2>(new tools::wallet2()));
     wallets.back()->assign_account(a);
+    wallets.back()->get_account().set_createtime(0);
+    wallets.back()->set_core_proxy(tmp_proxy);
   }
   uint64_t height = 0;
   for (auto& w : wallets)
@@ -353,13 +374,27 @@ bool test_generator::find_kernel(const std::list<currency::account_base>& accs,
   return false;
 }
 //------------------------------------------------------------------
-bool test_generator::build_outputs_indext_for_chain(const blockchain_vector& blocks, outputs_index& index)
+bool test_generator::build_outputs_indext_for_chain(const blockchain_vector& blocks, outputs_index& index, tx_global_indexes& txs_outs)
 {
   for (size_t h = 0; h != blocks.size(); h++)
-    for (size_t tx_index = 0; tx_index != blocks[h]->m_transactions.size(); tx_index++)
-      for (size_t out_i = 0; out_i != blocks[h]->m_transactions[tx_index].vout.size(); out_i++)
-        index[blocks[h]->m_transactions[tx_index].vout[out_i].amount].push_back(std::tuple<size_t, size_t, size_t>(h, tx_index, out_i));
+  {
+    std::vector<uint64_t>& coinbase_outs = txs_outs[currency::get_transaction_hash(blocks[h]->b.miner_tx)];
+    for (size_t out_i = 0; out_i != blocks[h]->b.miner_tx.vout.size(); out_i++)
+    {
+      coinbase_outs.push_back(index[blocks[h]->b.miner_tx.vout[out_i].amount].size());
+      index[blocks[h]->b.miner_tx.vout[out_i].amount].push_back(std::tuple<size_t, size_t, size_t>(h, 0, out_i));
+    }
 
+    for (size_t tx_index = 0; tx_index != blocks[h]->m_transactions.size(); tx_index++)
+    {
+      std::vector<uint64_t>& tx_outs_indx = txs_outs[currency::get_transaction_hash(blocks[h]->b.miner_tx)];
+      for (size_t out_i = 0; out_i != blocks[h]->m_transactions[tx_index].vout.size(); out_i++)
+      {
+        tx_outs_indx.push_back(index[blocks[h]->m_transactions[tx_index].vout[out_i].amount].size());
+        index[blocks[h]->m_transactions[tx_index].vout[out_i].amount].push_back(std::tuple<size_t, size_t, size_t>(h, tx_index + 1, out_i));
+      }
+    }
+  }
   return true;
 }
 //------------------------------------------------------------------
@@ -383,17 +418,19 @@ bool test_generator::get_output_details_by_global_index(const test_generator::bl
   tx_out_index = std::get<2>(it->second[global_index]);
 
   CHECK_AND_ASSERT_THROW_MES(h < blck_chain.size(), "std::get<0>(it->second[kernel.tx_out_global_index]) < blck_chain.size()");
-  CHECK_AND_ASSERT_THROW_MES(tx_index < blck_chain[h]->m_transactions.size(), "tx_index < blck_chain[h].m_transactions.size()");
-  CHECK_AND_ASSERT_THROW_MES(tx_out_index < blck_chain[h]->m_transactions[tx_index].vout.size(), "tx_index < blck_chain[h].m_transactions.size()");
-  tx = &blck_chain[h]->m_transactions[tx_index];
-  tx_pub_key = get_tx_pub_key_from_extra(blck_chain[h]->m_transactions[tx_index]);
-  CHECK_AND_ASSERT_THROW_MES(blck_chain[h]->m_transactions[tx_index].vout[tx_out_index].target.type() == typeid(currency::txout_to_key),
+  CHECK_AND_ASSERT_THROW_MES(tx_index  < blck_chain[h]->m_transactions.size() + 1, "tx_index < blck_chain[h].m_transactions.size()");
+  tx = tx_index ? &blck_chain[h]->m_transactions[tx_index - 1] : &blck_chain[h]->b.miner_tx;
+
+  CHECK_AND_ASSERT_THROW_MES(tx_out_index < tx->vout.size(), "tx_index < blck_chain[h].m_transactions.size()");
+
+  tx_pub_key = get_tx_pub_key_from_extra(*tx);
+  CHECK_AND_ASSERT_THROW_MES(tx->vout[tx_out_index].target.type() == typeid(currency::txout_to_key),
     "blck_chain[h]->m_transactions[tx_index].vout[tx_out_index].target.type() == typeid(currency::txout_to_key)");
 
-  CHECK_AND_ASSERT_THROW_MES(blck_chain[h]->m_transactions[tx_index].vout[tx_out_index].amount == amount,
+  CHECK_AND_ASSERT_THROW_MES(tx->vout[tx_out_index].amount == amount,
     "blck_chain[h]->m_transactions[tx_index].vout[tx_out_index].amount == amount");
 
-  output_key = boost::get<currency::txout_to_key>(blck_chain[h]->m_transactions[tx_index].vout[tx_out_index].target).key;
+  output_key = boost::get<currency::txout_to_key>(tx->vout[tx_out_index].target).key;
   return true;
 }
 //------------------------------------------------------------------
@@ -544,7 +581,7 @@ bool test_generator::construct_block(currency::block& blk,
   std::vector<size_t> block_sizes;
   get_last_n_block_sizes(block_sizes, prev_id, CURRENCY_REWARD_BLOCKS_WINDOW);
 
-  return construct_block(blk, height, prev_id, miner_acc, timestamp, already_generated_coins, block_sizes, tx_list, ai);
+  return construct_block(blk, height, prev_id, miner_acc, timestamp, already_generated_coins, block_sizes, tx_list, ai, coin_stake_sources);
 }
 
  bool test_generator::construct_block_manually(currency::block& blk, const block& prev_block, const account_base& miner_acc,
