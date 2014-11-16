@@ -149,6 +149,7 @@ bool test_generator::construct_block(currency::block& blk,
 
     bool r = find_kernel(coin_stake_sources, blocks, oi, wallets, pe, won_walled_index);
     CHECK_AND_ASSERT_THROW_MES(r, "failed to find_kernel ");
+    blk.flags = CURRENCY_BLOCK_FLAG_POS_BLOCK;
   }
 
   blk.miner_tx = AUTO_VAL_INIT(blk.miner_tx);

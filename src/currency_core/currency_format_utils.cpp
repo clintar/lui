@@ -624,7 +624,7 @@ namespace currency
   //---------------------------------------------------------------
   uint64_t get_block_height(const block& b)
   {
-    CHECK_AND_ASSERT_MES(b.miner_tx.vin.size() < 2, 0, "wrong miner tx in block: " << get_block_hash(b) << ", b.miner_tx.vin.size() != 1");
+    CHECK_AND_ASSERT_MES(b.miner_tx.vin.size() == 1 || b.miner_tx.vin.size() == 2, 0, "wrong miner tx in block: " << get_block_hash(b) << ", b.miner_tx.vin.size() != 1");
     CHECKED_GET_SPECIFIC_VARIANT(b.miner_tx.vin[0], const txin_gen, coinbase_in, 0);
     return coinbase_in.height;
   }
@@ -1211,7 +1211,9 @@ namespace currency
   //---------------------------------------------------------------
   bool is_pos_block(const transaction& tx)
   {
-    if (tx.vin.size() == 1 && tx.vin[0].type() == typeid(txin_to_key))
+    if (tx.vin.size() == 2 &&
+        tx.vin[0].type() == typeid(txin_gen) &&
+        tx.vin[1].type() == typeid(txin_to_key))
       return true;
     return false;
   }

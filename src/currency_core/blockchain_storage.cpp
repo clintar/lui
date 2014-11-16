@@ -587,15 +587,20 @@ wide_difficulty_type blockchain_storage::get_next_difficulty_for_alternative_cha
   return next_difficulty(timestamps, commulative_difficulties, pos ? DIFFICULTY_POS_TARGET:DIFFICULTY_POW_TARGET);
 }
 //------------------------------------------------------------------
-bool blockchain_storage::prevalidate_miner_transaction(const block& b, uint64_t height)
+bool blockchain_storage::prevalidate_miner_transaction(const block& b, uint64_t height, bool pos)
 {
-  CHECK_AND_ASSERT_MES(b.miner_tx.vin.size() == 1, false, "coinbase transaction in the block has no inputs");
+  CHECK_AND_ASSERT_MES((pos ? (b.miner_tx.vin.size() == 2) : (b.miner_tx.vin.size() == 1)), false, "coinbase transaction in the block has no inputs");
   CHECK_AND_ASSERT_MES(b.miner_tx.vin[0].type() == typeid(txin_gen), false, "coinbase transaction in the block has the wrong type");
   if(boost::get<txin_gen>(b.miner_tx.vin[0]).height != height)
   {
     LOG_PRINT_RED_L0("The miner transaction in block has invalid height: " << boost::get<txin_gen>(b.miner_tx.vin[0]).height << ", expected: " << height);
     return false;
   }
+  if (pos)
+  {
+    CHECK_AND_ASSERT_MES(b.miner_tx.vin[1].type() == typeid(txin_to_key), false, "coinstake transaction in the block has the wrong type");
+  }
+
   CHECK_AND_ASSERT_MES(b.miner_tx.unlock_time == height + CURRENCY_MINED_MONEY_UNLOCK_WINDOW,
                   false,
                   "coinbase transaction transaction have wrong unlock time=" << b.miner_tx.unlock_time << ", expected " << height + CURRENCY_MINED_MONEY_UNLOCK_WINDOW);
@@ -935,7 +940,7 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
     if (pos_block)
     {
       //POS
-      bool res = validate_pos_block(bei.bl, current_diff);
+      bool res = validate_pos_block(bei.bl, current_diff, id);
       CHECK_AND_ASSERT_MES(res, false, "Failed to validate_pos_block on alternative block, height = " 
                                         << bei.height 
                                         << ", block id: " << get_block_hash(bei.bl));
@@ -998,7 +1003,7 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
       }
     }
 
-    if(!prevalidate_miner_transaction(b, bei.height))
+    if (!prevalidate_miner_transaction(b, bei.height, pos_block))
     {
       LOG_PRINT_RED_L0("Block with id: " << string_tools::pod_to_hex(id)
         << " (as alternative) have wrong miner transaction.");
@@ -2045,22 +2050,22 @@ bool check_pos_block(const block& b)
   return false;
 }
 //------------------------------------------------------------------
-bool blockchain_storage::validate_pos_block(const block& b)
+bool blockchain_storage::validate_pos_block(const block& b, const crypto::hash& id)
 {
   //validate 
   wide_difficulty_type basic_diff = get_next_diff_conditional(true);
-  return validate_pos_block(b, basic_diff);
+  return validate_pos_block(b, basic_diff, id);
 }
 //------------------------------------------------------------------
-bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type basic_diff)
+bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type basic_diff, const crypto::hash& id)
 {
   uint64_t coin_age = 0;
   wide_difficulty_type final_diff = 0;
   crypto::hash proof_hash = null_hash;
-  return validate_pos_block(b, basic_diff, coin_age, final_diff, proof_hash);
+  return validate_pos_block(b, basic_diff, coin_age, final_diff, proof_hash, id);
 }
 //------------------------------------------------------------------
-bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type basic_diff, uint64_t& coin_age, wide_difficulty_type& final_diff, crypto::hash& proof_hash)
+bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type basic_diff, uint64_t& coin_age, wide_difficulty_type& final_diff, crypto::hash& proof_hash, const crypto::hash& id)
 {
   bool is_pos = is_pos_block(b);
   CHECK_AND_ASSERT_MES(is_pos, false, "is_pos_block() returned false validate_pos_block()");
@@ -2074,6 +2079,11 @@ bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type
   if (!check_hash(proof_hash, final_diff))
     return false;
 
+  //validate signature
+  uint64_t max_related_block_height = 0;
+  const txin_to_key& coinstake_in = boost::get<txin_to_key>(b.miner_tx.vin[1]);
+  r = check_tx_input(coinstake_in, id, b.miner_tx.signatures[0], &max_related_block_height);
+  CHECK_AND_ASSERT_MES(r, false, "failed to build kernel_stake");
   return true;
 }
 //------------------------------------------------------------------
@@ -2112,7 +2122,7 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
   TIME_MEASURE_START(longhash_calculating_time);
   if (is_pos_bl)
   {
-    bool r = validate_pos_block(bl, current_diffic, coin_age, this_coin_diff, proof_hash);
+    bool r = validate_pos_block(bl, current_diffic, coin_age, this_coin_diff, proof_hash, id);
     CHECK_AND_ASSERT_MES(r, false, "validate_pos_block failed!!");
   }
   else
@@ -2148,7 +2158,7 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
 
   TIME_MEASURE_FINISH(longhash_calculating_time);
 
-  if(!prevalidate_miner_transaction(bl, m_blocks.size()))
+  if (!prevalidate_miner_transaction(bl, m_blocks.size(), is_pos_bl))
   {
     LOG_PRINT_L0("Block with id: " << id
       << " failed to pass prevalidation");

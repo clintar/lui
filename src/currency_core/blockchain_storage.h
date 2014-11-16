@@ -136,9 +136,9 @@ namespace currency
     bool build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coindays_weight);
     bool build_stake_modifier(crypto::hash& sm);
     bool scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMAND_RPC_SCAN_POS::response& rsp);
-    bool validate_pos_block(const block& b);
-    bool validate_pos_block(const block& b, wide_difficulty_type basic_diff);
-    bool validate_pos_block(const block& b, wide_difficulty_type basic_diff, uint64_t& coin_age, wide_difficulty_type& final_diff, crypto::hash& proof_hash);
+    bool validate_pos_block(const block& b, const crypto::hash& id);
+    bool validate_pos_block(const block& b, wide_difficulty_type basic_diff, const crypto::hash& id);
+    bool validate_pos_block(const block& b, wide_difficulty_type basic_diff, uint64_t& coin_age, wide_difficulty_type& final_diff, crypto::hash& proof_hash, const crypto::hash& id);
     bool is_coin_age_okay(uint64_t source_tx_block_timestamp, uint64_t last_block_timestamp);
     void set_pos_config(const pos_config& pc);
 
@@ -242,7 +242,7 @@ namespace currency
     bool handle_block_to_main_chain(const block& bl, block_verification_context& bvc);
     bool handle_block_to_main_chain(const block& bl, const crypto::hash& id, block_verification_context& bvc);
     bool handle_alternative_block(const block& b, const crypto::hash& id, block_verification_context& bvc);
-    bool prevalidate_miner_transaction(const block& b, uint64_t height);
+    bool prevalidate_miner_transaction(const block& b, uint64_t height, bool pos);
     bool validate_miner_transaction(const block& b, size_t cumulative_block_size, uint64_t fee, uint64_t& base_reward, uint64_t already_generated_coins);
     bool validate_transaction(const block& b, uint64_t height, const transaction& tx);
     bool rollback_blockchain_switching(std::list<block>& original_chain, size_t rollback_height);

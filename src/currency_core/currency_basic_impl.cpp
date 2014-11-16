@@ -93,10 +93,10 @@ namespace currency {
   //-----------------------------------------------------------------------
   bool is_coinbase(const transaction& tx)
   {
-    if(tx.vin.size() != 1)
+    if (!tx.vin.size() || tx.vin.size() > 2)
       return false;
 
-    if(tx.vin[0].type() != typeid(txin_gen))
+    if (tx.vin[0].type() != typeid(txin_gen))
       return false;
 
     return true;
