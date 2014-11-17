@@ -557,7 +557,7 @@ wide_difficulty_type blockchain_storage::get_next_diff_conditional(bool pos)
     if ((pos && !is_pos_bl) || (!pos && is_pos_bl))
       continue;
     timestamps.push_back(rit->bl.timestamp);
-    commulative_difficulties.push_back(rit->cumulative_difficulty);
+    commulative_difficulties.push_back(rit->cumulative_diff_precise);
   }
   return next_difficulty(timestamps, commulative_difficulties, pos ? DIFFICULTY_POS_TARGET : DIFFICULTY_POW_TARGET);
 }
@@ -573,7 +573,7 @@ wide_difficulty_type blockchain_storage::get_next_difficulty_for_alternative_cha
     if ((pos && !is_pos_bl) || (!pos && is_pos_bl))
       continue;
     timestamps.push_back((*it)->second.bl.timestamp);
-    commulative_difficulties.push_back((*it)->second.cumulative_difficulty);
+    commulative_difficulties.push_back((*it)->second.cumulative_diff_precise);
   }
 
   size_t main_chain_start_offset = (alt_chain.size() ? alt_chain.front()->second.height : bei.height)-1;
@@ -581,7 +581,7 @@ wide_difficulty_type blockchain_storage::get_next_difficulty_for_alternative_cha
   for (uint64_t i = main_chain_start_offset; i != 0 && timestamps.size() < DIFFICULTY_BLOCKS_COUNT; --i)
   {
     timestamps.push_back(m_blocks[i].bl.timestamp);
-    commulative_difficulties.push_back(m_blocks[i].cumulative_difficulty);
+    commulative_difficulties.push_back(m_blocks[i].cumulative_diff_precise);
   } 
 
   return next_difficulty(timestamps, commulative_difficulties, pos ? DIFFICULTY_POS_TARGET:DIFFICULTY_POW_TARGET);
@@ -1011,9 +1011,12 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
       return false;
 
     }
+    bei.difficulty = current_diff;
+    bei.cumulative_diff_adjusted = alt_chain.size() ? it_prev->second.cumulative_diff_adjusted : m_blocks[it_main_prev->second].cumulative_diff_adjusted;
+    bei.cumulative_diff_precise = get_last_alt_x_block_cumulative_precise_difficulty(alt_chain, bei.height, pos_block);
 
-    bei.cumulative_difficulty = alt_chain.size() ? it_prev->second.cumulative_difficulty: m_blocks[it_main_prev->second].cumulative_difficulty;
-    bei.cumulative_difficulty += current_diff;
+    bei.cumulative_diff_adjusted += get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain, bei.height, current_diff);
+    bei.cumulative_diff_precise += current_diff;
 
 #ifdef _DEBUG
     auto i_dres = m_alternative_chains.find(id);
@@ -1023,11 +1026,11 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
     CHECK_AND_ASSERT_MES(i_res.second, false, "insertion of new alternative block returned as it already exist");
     alt_chain.push_back(i_res.first);
     //check if difficulty bigger then in main chain
-    if(m_blocks.back().cumulative_difficulty < bei.cumulative_difficulty)
+    if (m_blocks.back().cumulative_diff_adjusted < bei.cumulative_diff_adjusted)
     {
       //do reorganize!
-      LOG_PRINT_GREEN("###### REORGANIZE on height: " << alt_chain.front()->second.height << " of " << m_blocks.size() -1  << " with cum_difficulty " << m_blocks.back().cumulative_difficulty
-        << ENDL << " alternative blockchain size: " << alt_chain.size() << " with cum_difficulty " << bei.cumulative_difficulty, LOG_LEVEL_0);
+      LOG_PRINT_GREEN("###### REORGANIZE on height: " << alt_chain.front()->second.height << " of " << m_blocks.size() - 1 << " with cumulative_diff_adjusted " << m_blocks.back().cumulative_diff_adjusted
+        << ENDL << " alternative blockchain size: " << alt_chain.size() << " with cumulative_diff_adjusted " << bei.cumulative_diff_adjusted, LOG_LEVEL_0);
       bool r = switch_to_alternative_blockchain(alt_chain);
       if(r) bvc.m_added_to_main_chain = true;
       else bvc.m_verifivation_failed = true;
@@ -1142,6 +1145,8 @@ bool blockchain_storage::check_keyimages(const std::list<crypto::key_image>& ima
 //------------------------------------------------------------------
 uint64_t blockchain_storage::get_current_hashrate(size_t aprox_count)
 {
+  /*
+  TODO:
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   if(m_blocks.size() <= aprox_count)
     return 0;
@@ -1149,6 +1154,8 @@ uint64_t blockchain_storage::get_current_hashrate(size_t aprox_count)
   wide_difficulty_type w_hr = (m_blocks.back().cumulative_difficulty - m_blocks[m_blocks.size() - aprox_count].cumulative_difficulty)/
                               (m_blocks.back().bl.timestamp - m_blocks[m_blocks.size() - aprox_count].bl.timestamp);
   return w_hr.convert_to<uint64_t>();
+  */
+  return 0;
 }
 //------------------------------------------------------------------
 bool blockchain_storage::extport_scratchpad_to_file(const std::string& path)
@@ -1400,10 +1407,7 @@ wide_difficulty_type blockchain_storage::block_difficulty(size_t i)
 {
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   CHECK_AND_ASSERT_MES(i < m_blocks.size(), false, "wrong block index i = " << i << " at blockchain_storage::block_difficulty()");
-  if(i == 0)
-    return m_blocks[i].cumulative_difficulty;
-
-  return m_blocks[i].cumulative_difficulty - m_blocks[i-1].cumulative_difficulty;
+  return m_blocks[i].difficulty;
 }
 //------------------------------------------------------------------
 void blockchain_storage::print_blockchain(uint64_t start_index, uint64_t end_index)
@@ -1418,7 +1422,10 @@ void blockchain_storage::print_blockchain(uint64_t start_index, uint64_t end_ind
 
   for(size_t i = start_index; i != m_blocks.size() && i != end_index; i++)
   {
-    ss << "height " << i << ", timestamp " << m_blocks[i].bl.timestamp << ", cumul_dif " << m_blocks[i].cumulative_difficulty << ", cumul_size " << m_blocks[i].block_cumulative_size
+    ss << "height " << i << ", timestamp " << m_blocks[i].bl.timestamp 
+      << ", cumul_diff_adj " << m_blocks[i].cumulative_diff_adjusted 
+      << ", cumul_diff_pcs " << m_blocks[i].cumulative_diff_precise
+      << ", cumul_size " << m_blocks[i].block_cumulative_size
       << "\nid\t\t" <<  get_block_hash(m_blocks[i].bl)
       << "\ndifficulty\t\t" << block_difficulty(i) << ", nonce " << m_blocks[i].bl.nonce << ", tx_count " << m_blocks[i].bl.tx_hashes.size() << ENDL;
   }
@@ -2087,6 +2094,114 @@ bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type
   return true;
 }
 //------------------------------------------------------------------
+wide_difficulty_type blockchain_storage::get_adjusted_cumulative_difficulty_for_next_pos(wide_difficulty_type next_diff)
+{
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+  wide_difficulty_type last_pow_diff = 0;
+  wide_difficulty_type last_pos_diff = 0;
+  for (auto it = m_blocks.rbegin(); it != m_blocks.rend() || !(last_pow_diff && last_pow_diff); ++it)
+  {
+    if (is_pos_block(it->bl))
+    {
+      if (!last_pos_diff)
+      {
+        last_pos_diff = it->difficulty;
+      }
+    }else
+    {
+      if (!last_pow_diff)
+      {
+        last_pow_diff = it->difficulty;
+      }
+    }
+  }
+  if (!last_pos_diff)
+    return next_diff;
+  return next_diff*last_pow_diff/last_pos_diff;
+}
+//------------------------------------------------------------------
+wide_difficulty_type blockchain_storage::get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain_list& alt_chain, uint64_t block_height, wide_difficulty_type next_diff)
+{
+
+  wide_difficulty_type last_pow_diff = 0;
+  wide_difficulty_type last_pos_diff = 0;
+  uint64_t main_chain_first_block_index = block_height - 1;
+
+  for (auto it = alt_chain.rbegin(); it != alt_chain.rend() && !(last_pow_diff && last_pow_diff); it++)
+  {
+    if (is_pos_block((*it)->second.bl ))
+    {
+      if (!last_pos_diff)
+      {
+        last_pos_diff = (*it)->second.difficulty;
+      }
+    }
+    else
+    {
+      if (!last_pow_diff)
+      {
+        last_pow_diff = (*it)->second.difficulty;
+      }
+    }
+  }
+
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+  for (auto it = m_blocks.rbegin(); it != m_blocks.rend() && !(last_pow_diff && last_pow_diff); ++it)
+  {
+    if (is_pos_block(it->bl))
+    {
+      if (!last_pos_diff)
+      {
+        last_pos_diff = it->difficulty;
+      }
+    }
+    else
+    {
+      if (!last_pow_diff)
+      {
+        last_pow_diff = it->difficulty;
+      }
+    }
+  }
+  if (!last_pos_diff)
+    return next_diff;
+  return next_diff*last_pow_diff / last_pos_diff;
+}
+//------------------------------------------------------------------
+uint64_t blockchain_storage::get_last_x_block_height(bool pos)
+{
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+
+  for (auto it = m_blocks.rbegin(); it != m_blocks.rend(); it++)
+  {
+    if (is_pos_block(it->bl) == pos)
+      return it->height;
+  }
+  return 0;
+}
+//------------------------------------------------------------------
+wide_difficulty_type blockchain_storage::get_last_alt_x_block_cumulative_precise_difficulty(alt_chain_list& alt_chain, uint64_t block_height, bool pos)
+{
+  uint64_t main_chain_first_block = block_height - 1;
+  for (auto it = alt_chain.rbegin(); it != alt_chain.rend(); it++)
+  {
+    if (is_pos_block((*it)->second.bl) == pos)
+      return (*it)->second.cumulative_diff_precise;
+    main_chain_first_block = (*it)->second.height - 1;
+  }
+
+
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+  CHECK_AND_ASSERT_MES(main_chain_first_block < m_blocks.size(), false, "Intrnal error: main_chain_first_block(" << main_chain_first_block << ") < m_blocks.size() (" << m_blocks.size() << ")");
+
+  for (uint64_t i = main_chain_first_block; i != 0; i++)
+  {
+    if (is_pos_block(m_blocks[i].bl) == pos)
+      return m_blocks[i].cumulative_diff_precise;
+  }
+  return 0;
+}
+//------------------------------------------------------------------
 bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypto::hash& id, block_verification_context& bvc)
 {
   TIME_MEASURE_START(block_processing_time);
@@ -2235,15 +2350,33 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
   }
 
 
+  //fill block_extended_info
   block_extended_info bei = boost::value_initialized<block_extended_info>();
   bei.bl = bl;
   bei.scratch_offset = m_scratchpad.size();
   bei.block_cumulative_size = cumulative_block_size;
-  bei.cumulative_difficulty = current_diffic;
-  bei.already_generated_coins = already_generated_coins + base_reward;
-  if(m_blocks.size())
-    bei.cumulative_difficulty += m_blocks.back().cumulative_difficulty;
+  bei.difficulty = current_diffic;
 
+  //precise difficulty - difficulty used to calculate next difficulty
+  uint64_t last_x_h = get_last_x_block_height(is_pos_bl);
+  if (!last_x_h)
+    bei.cumulative_diff_precise = current_diffic;
+  else
+    bei.cumulative_diff_precise = m_blocks[last_x_h].cumulative_diff_precise + current_diffic;
+
+  if (m_blocks.size())
+  {
+    bei.cumulative_diff_adjusted += m_blocks.back().cumulative_diff_adjusted;
+  }
+
+  //adjusted difficulty - difficulty used to switch blockchain
+  if (is_pos_bl)
+    bei.cumulative_diff_adjusted += get_adjusted_cumulative_difficulty_for_next_pos(current_diffic);
+  else
+    bei.cumulative_diff_adjusted += current_diffic;
+ 
+  //etc 
+  bei.already_generated_coins = already_generated_coins + base_reward;
   bei.height = m_blocks.size();
 
   auto ind_res = m_blocks_index.insert(std::pair<crypto::hash, size_t>(id, bei.height));

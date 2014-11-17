@@ -34,16 +34,9 @@ namespace boost
     {
       ar & ei.bl;
       ar & ei.height;
-      if(version < 1)
-      {
-        CHECK_AND_ASSERT_THROW_MES(archive_t::is_loading::value, "Wrong version at storing blockchain storage file");
-        currency::difficulty_type old_dif = 0;
-        ar & old_dif;
-        ei.cumulative_difficulty = old_dif;
-      }else
-      {
-        ar & ei.cumulative_difficulty;
-      }
+      ar & ei.cumulative_diff_adjusted;
+      ar & ei.cumulative_diff_precise;
+      ar & ei.difficulty;
       ar & ei.block_cumulative_size;
       ar & ei.already_generated_coins;
       ar & ei.scratch_offset;

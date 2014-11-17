@@ -51,7 +51,9 @@ namespace currency
       block   bl;
       uint64_t height;
       size_t block_cumulative_size;
-      wide_difficulty_type cumulative_difficulty;
+      wide_difficulty_type cumulative_diff_adjusted;
+      wide_difficulty_type cumulative_diff_precise;
+      wide_difficulty_type difficulty;
       uint64_t already_generated_coins;
       uint64_t scratch_offset;
     };
@@ -143,6 +145,7 @@ namespace currency
     void set_pos_config(const pos_config& pc);
 
 
+
     template<class t_ids_container, class t_blocks_container, class t_missed_container>
     bool get_blocks(const t_ids_container& block_ids, t_blocks_container& blocks, t_missed_container& missed_bs)
     {
@@ -201,6 +204,7 @@ namespace currency
     typedef std::map<uint64_t, std::vector<std::pair<crypto::hash, size_t>>> outputs_container; //crypto::hash - tx hash, size_t - index of out in transaction
     typedef std::map<std::string, std::list<alias_info_base>> aliases_container; //alias can be address address address + view key
     typedef std::unordered_map<account_public_address, std::string> address_to_aliases_container;
+    typedef std::list<blockchain_storage::blocks_ext_by_hash::iterator> alt_chain_list;
     
     tx_memory_pool& m_tx_pool;
     critical_section m_blockchain_lock; // TODO: add here reader/writer lock
@@ -269,6 +273,12 @@ namespace currency
     bool resync_spent_tx_flags();
     bool prune_ring_signatures_if_need();
     bool prune_ring_signatures(uint64_t height, uint64_t& transactions_pruned, uint64_t& signatures_pruned);
+    //POS
+    wide_difficulty_type get_adjusted_cumulative_difficulty_for_next_pos(wide_difficulty_type next_diff);
+    wide_difficulty_type get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain_list& alt_chain, uint64_t block_height, wide_difficulty_type next_diff);
+    uint64_t get_last_x_block_height(bool pos);
+    wide_difficulty_type get_last_alt_x_block_cumulative_precise_difficulty(alt_chain_list& alt_chain, uint64_t block_height, bool pos);
+
   };
 
 
