@@ -580,6 +580,10 @@ wide_difficulty_type blockchain_storage::get_next_difficulty_for_alternative_cha
   CHECK_AND_ASSERT_MES(main_chain_start_offset > 0, false, "Internal error: main_chain_start_offset > 0 check failed");
   for (uint64_t i = main_chain_start_offset; i != 0 && timestamps.size() < DIFFICULTY_BLOCKS_COUNT; --i)
   {
+    bool is_pos_bl = is_pos_block(m_blocks[i].bl);
+    if ((pos && !is_pos_bl) || (!pos && is_pos_bl))
+      continue;
+
     timestamps.push_back(m_blocks[i].bl.timestamp);
     commulative_difficulties.push_back(m_blocks[i].cumulative_diff_precise);
   } 
@@ -1012,10 +1016,14 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
 
     }
     bei.difficulty = current_diff;
+    
     bei.cumulative_diff_adjusted = alt_chain.size() ? it_prev->second.cumulative_diff_adjusted : m_blocks[it_main_prev->second].cumulative_diff_adjusted;
-    bei.cumulative_diff_precise = get_last_alt_x_block_cumulative_precise_difficulty(alt_chain, bei.height, pos_block);
+    if (pos_block)
+      bei.cumulative_diff_adjusted += get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain, bei.height, current_diff);
+    else
+      bei.cumulative_diff_adjusted += current_diff;
 
-    bei.cumulative_diff_adjusted += get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain, bei.height, current_diff);
+    bei.cumulative_diff_precise = get_last_alt_x_block_cumulative_precise_difficulty(alt_chain, bei.height, pos_block);
     bei.cumulative_diff_precise += current_diff;
 
 #ifdef _DEBUG
@@ -1039,7 +1047,9 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
     LOG_PRINT_BLUE("----- BLOCK ADDED AS ALTERNATIVE ON HEIGHT " << bei.height
       << ENDL << "id:\t" << id
       << ENDL << "PoW:\t" << proof_of_work
-      << ENDL << "difficulty:\t" << current_diff, LOG_LEVEL_0);
+      << ENDL << "difficulty:\t" << current_diff
+      << ENDL << "adjusted_cumulative_difficulty:\t" << bei.cumulative_diff_adjusted << "(curren mainchain cumul_diff: " << m_blocks.back().cumulative_diff_adjusted << ")"
+      , LOG_LEVEL_0);
     return true;
   }else
   {
