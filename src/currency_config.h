@@ -102,7 +102,7 @@
 #define P2P_IDLE_CONNECTION_KILL_INTERVAL               (5*60) //5 minutes
 
 //PoS definitions
-#define POS_SCAN_WINDOW                                 (60*4) // 4 minutes
+#define POS_SCAN_WINDOW                                 (60*60) // 60 minutes
 #define POS_MIN_COINAGE                                 (60*60*24*30) // 30 days
 #define POS_MAX_COINAGE                                 (60*60*24*90) // 90 days
 #define POS_STARTER_MODFIFIER                           "bd82e18d42a7ad239588b24fd356d63cc82717e1fae8f6a492cd25d62fda263f"

@@ -328,9 +328,9 @@ bool test_generator::find_kernel(const std::list<currency::account_base>& accs,
   currency::pos_entry& pe,
   size_t& found_wallet_index)
 {
-  uint64_t timstamp_start = 0;
+  uint64_t last_block_timestamp = 0;
   wide_difficulty_type basic_diff = 0;
-  timstamp_start = blck_chain.back()->b.timestamp;
+  last_block_timestamp = blck_chain.back()->b.timestamp;
   basic_diff = get_difficulty_for_next_block(blck_chain, false);
 
   //lets try to find block
@@ -343,7 +343,7 @@ bool test_generator::find_kernel(const std::list<currency::account_base>& accs,
 
     for (size_t i = 0; i != scan_pos_entries.pos_entries.size(); i++)
     {
-      for (uint64_t ts = timstamp_start; ts < timstamp_start + POS_SCAN_WINDOW; ts++)
+      for (uint64_t ts = last_block_timestamp - POS_SCAN_WINDOW; ts < last_block_timestamp + POS_SCAN_WINDOW; ts++)
       {
         stake_kernel sk = AUTO_VAL_INIT(sk);
         uint64_t coindays_weight = 0;

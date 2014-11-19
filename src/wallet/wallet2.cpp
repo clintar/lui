@@ -118,8 +118,11 @@ void wallet2::process_new_transaction(const currency::transaction& tx, uint64_t 
   size_t i = 0;
   BOOST_FOREACH(auto& in, tx.vin)
   {
-    if(in.type() != typeid(currency::txin_to_key))
+    if (in.type() != typeid(currency::txin_to_key))
+    {
+      i++;
       continue;
+    }
     auto it = m_key_images.find(boost::get<currency::txin_to_key>(in).k_image);
     if(it != m_key_images.end())
     {

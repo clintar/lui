@@ -86,7 +86,7 @@ namespace currency
     else if (coin_age > m_pos_config.max_coinage)
       coin_age = m_pos_config.max_coinage;
 */
-    return 1;// coin_age / (60 * 60 * 24);
+    return amount;// coin_age / (60 * 60 * 24);
   }
   //------------------------------------------------------------------
 

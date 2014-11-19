@@ -16,5 +16,6 @@ struct gen_pos_basic_tests : public test_chain_unit_base
 
   bool generate(std::vector<test_event_entry>& events) const;
   bool configure_core(currency::core& c, size_t ev_index, const std::vector<test_event_entry>& events);
+  bool configure_check_height1(currency::core& c, size_t ev_index, const std::vector<test_event_entry>& events);
 
 };
