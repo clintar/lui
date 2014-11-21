@@ -546,7 +546,7 @@ wide_difficulty_type blockchain_storage::get_next_diff_conditional(bool pos)
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   std::vector<uint64_t> timestamps;
   std::vector<wide_difficulty_type> commulative_difficulties;
-  size_t count = 0;
+  //size_t count = 0;
   if (!m_blocks.size())
     return DIFFICULTY_STARTER;
   //skip genesis timestamp
@@ -624,16 +624,12 @@ bool blockchain_storage::validate_miner_transaction(const block& b, size_t cumul
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   //validate reward
   uint64_t money_in_use = 0;
-  uint64_t royalty = 0;
 
   //size_t outs_total = b.miner_tx.vout.size();
   BOOST_FOREACH(auto& o, b.miner_tx.vout)
   {
     money_in_use += o.amount;
   }
-  uint64_t h = get_block_height(b);
-
-
 
   std::vector<size_t> last_blocks_sizes;
   get_last_n_blocks_sizes(last_blocks_sizes, CURRENCY_REWARD_BLOCKS_WINDOW);
@@ -2135,7 +2131,6 @@ wide_difficulty_type blockchain_storage::get_adjusted_cumulative_difficulty_for_
 
   wide_difficulty_type last_pow_diff = 0;
   wide_difficulty_type last_pos_diff = 0;
-  uint64_t main_chain_first_block_index = block_height - 1;
 
   for (auto it = alt_chain.rbegin(); it != alt_chain.rend() && !(last_pow_diff && last_pow_diff); it++)
   {
