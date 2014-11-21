@@ -160,7 +160,7 @@ namespace currency {
     }
     static_assert(DIFFICULTY_WINDOW >= 2, "Window is too small");
     CHECK_AND_ASSERT_MES(length <= DIFFICULTY_WINDOW, 0, "length <= DIFFICULTY_WINDOW check failed, length=" << length);
-    sort(timestamps.begin(), timestamps.end(), std::greater<>());
+    sort(timestamps.begin(), timestamps.end(), std::greater<uint64_t>());
     size_t cut_begin, cut_end;
     static_assert(2 * DIFFICULTY_CUT <= DIFFICULTY_WINDOW - 2, "Cut length is too large");
     if (length <= DIFFICULTY_WINDOW - 2 * DIFFICULTY_CUT) {
