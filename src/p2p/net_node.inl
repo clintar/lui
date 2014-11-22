@@ -231,7 +231,7 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::init(const boost::program_options::variables_map& vm)
   {
 #ifndef TESTNET
-    ADD_HARDCODED_SEED_NODE("162.243.210.156" STRINGIFY_EXPAND(P2P_DEFAULT_PORT));
+    ADD_HARDCODED_SEED_NODE("162.243.210.156:" STRINGIFY_EXPAND(P2P_DEFAULT_PORT));
 #else
     ADD_HARDCODED_SEED_NODE(":" STRINGIFY_EXPAND(P2P_DEFAULT_PORT));
 #endif
