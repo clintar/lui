@@ -50,6 +50,7 @@ signals:
   void switch_view(const QString str);
   void set_recent_transfers(const QString str);
   void handle_internal_callback(const QString str, const QString callback_name);
+  void update_pos_mining_text(const QString str);
 
 
 
@@ -457,6 +458,13 @@ bool Html5ApplicationViewer::set_html_path(const std::string& path)
 {
   initTrayIcon(path);
   loadFile(QLatin1String((path + "/index.html").c_str()));
+  return true;
+}
+bool Html5ApplicationViewer::pos_block_found(const currency::block& block_found)
+{ 
+  std::stringstream ss;
+  ss << "Found Block h = " << currency::get_block_height(block_found);
+  m_d->update_pos_mining_text(ss.str().c_str());
   return true;
 }
 

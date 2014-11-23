@@ -76,6 +76,7 @@ private:
   virtual bool switch_view(int view_no);
   virtual bool set_recent_transfers(const view::transfers_array& ta);
   virtual bool set_html_path(const std::string& path);
+  virtual bool pos_block_found(const currency::block& block_found);
   //----------------------------------------------
   bool is_uri_allowed(const QString& uri);
 

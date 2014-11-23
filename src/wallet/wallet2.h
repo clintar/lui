@@ -42,6 +42,8 @@ namespace tools
     virtual void on_money_spent(uint64_t /*height*/, const currency::transaction& /*in_tx*/, size_t /*out_index*/, const currency::transaction& /*spend_tx*/) {}
     virtual void on_transfer2(const wallet_rpc::wallet_transfer_info& wti) {}
     virtual void on_money_sent(const wallet_rpc::wallet_transfer_info& wti) {}
+    virtual void on_pos_block_found(const currency::block& /*block*/) {}
+
   };
 
     

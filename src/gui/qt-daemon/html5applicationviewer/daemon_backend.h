@@ -63,6 +63,8 @@ private:
   //----- tools::i_wallet2_callback ------
   virtual void on_new_block(uint64_t height, const currency::block& block);
   virtual void on_transfer2(const tools::wallet_rpc::wallet_transfer_info& wti);
+  virtual void on_pos_block_found(const currency::block& /*block*/);
+
 
   std::thread m_main_worker_thread;
   std::atomic<bool> m_stop_singal_sent;
@@ -73,6 +75,8 @@ private:
   std::unique_ptr<tools::wallet2> m_wallet;
   std::atomic<uint64_t> m_last_daemon_height;
   std::atomic<uint64_t> m_last_wallet_synch_height;
+  std::atomic<uint64_t> m_last_wallet_mint_time;
+
   std::string m_data_dir;
 
   //daemon stuff

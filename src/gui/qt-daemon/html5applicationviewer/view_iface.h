@@ -103,7 +103,8 @@ public:
     uint64_t height;
     uint64_t out_connections_count;
     uint64_t inc_connections_count;
-    std::string difficulty;
+    std::string pos_difficulty;
+    std::string pow_difficulty;
     uint64_t hashrate;
     uint64_t last_build_displaymode;
     std::string last_build_available;
@@ -116,7 +117,8 @@ public:
       KV_SERIALIZE(height)
       KV_SERIALIZE(out_connections_count)
       KV_SERIALIZE(inc_connections_count)
-      KV_SERIALIZE(difficulty)
+      KV_SERIALIZE(pos_difficulty)
+      KV_SERIALIZE(pow_difficulty)
       KV_SERIALIZE(hashrate)
       KV_SERIALIZE(last_build_displaymode)
       KV_SERIALIZE(last_build_available)
@@ -232,6 +234,7 @@ public:
     virtual bool switch_view(int view_no)=0;
     virtual bool set_recent_transfers(const transfers_array& ta) = 0;
     virtual bool set_html_path(const std::string& path)=0;
+    virtual bool pos_block_found(const currency::block& block_found)=0;
   };
 
   struct view_stub: public i_view
@@ -247,5 +250,6 @@ public:
     virtual bool switch_view(int /*view_no*/){ return true; }
     virtual bool set_recent_transfers(const transfers_array& /*ta*/){ return true; }
     virtual bool set_html_path(const std::string& path){ return true; };
+    virtual bool pos_block_found(const currency::block& block_found){ return true; };
   };
 }

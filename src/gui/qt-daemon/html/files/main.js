@@ -138,7 +138,8 @@ function on_update_daemon_state(info_obj)
     //$("#daemon_inc_connections_text").text(info_obj.inc_connections_count.toString());
 
     $("#daemon_height_text").text(info_obj.height.toString());
-    $("#difficulty_text").text(info_obj.difficulty);
+    $("#pow_difficulty_text").text(info_obj.pow_difficulty);
+    $("#pos_difficulty_text").text(info_obj.pos_difficulty);
     $("#hashrate_text").text(info_obj.hashrate.toString());
     if(info_obj.last_build_displaymode < 3)
         $("#last_actual_version_text").text("(available version: " + info_obj.last_build_available + ")");
@@ -576,7 +577,11 @@ function init_btc_exchange_rate()
     console.log("Request to https://www.bits222tamp.net/api/ticker/ sent");
 }
 
+function update_pos_mining_text(txt)
+{
+    $("#mining_state_span").text(txt);
 
+}
 
 function str_to_obj(str)
 {
@@ -693,7 +698,8 @@ $(function()
     Qt.show_wallet.connect(show_wallet);
     Qt.hide_wallet.connect(hide_wallet);
     Qt.switch_view.connect(on_switch_view);
-    Qt.set_recent_transfers.connect(str_to_obj.bind({cb: on_set_recent_transfers}));
+    Qt.set_recent_transfers.connect(str_to_obj.bind({ cb: on_set_recent_transfers }));
+    Qt.update_pos_mining_text.connect(update_pos_mining_text);
     Qt.handle_internal_callback.connect(on_handle_internal_callback);
 
 

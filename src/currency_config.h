@@ -8,7 +8,7 @@
 #define CURRENCY_MAX_BLOCK_SIZE                       500000000  // block header blob limit, never used!
 #define CURRENCY_MAX_TX_SIZE                          1000000000
 #define CURRENCY_PUBLIC_ADDRESS_TEXTBLOB_VER          0
-#define CURRENCY_PUBLIC_ADDRESS_BASE58_PREFIX         1 // addresses start with "1"
+#define CURRENCY_PUBLIC_ADDRESS_BASE58_PREFIX         99 // addresses start with 
 #define CURRENCY_MINED_MONEY_UNLOCK_WINDOW            10
 #define CURRENT_TRANSACTION_VERSION                   1
 #define CURRENT_BLOCK_MAJOR_VERSION                   1
@@ -107,13 +107,7 @@
 #define POS_MAX_COINAGE                                 (60*60*24*90) // 90 days
 #define POS_STARTER_MODFIFIER                           "bd82e18d42a7ad239588b24fd356d63cc82717e1fae8f6a492cd25d62fda263f"
 #define POS_MODFIFIER_INTERVAL                          10
-
-
-#ifdef TESTNET
-  #define CURRENCY_DONATIONS_INTERVAL                     10
-#else
-  #define CURRENCY_DONATIONS_INTERVAL                     720
-#endif
+#define POS_WALLET_MINING_SCAN_INTERVAL                 20  //seconds
 
 
 #define ALLOW_DEBUG_COMMANDS

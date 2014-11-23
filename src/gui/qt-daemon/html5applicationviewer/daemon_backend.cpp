@@ -36,7 +36,7 @@ bool daemon_backend::start(int argc, char* argv[], view::i_view* pview_handler)
     m_pview = pview_handler;
 
   view::daemon_status_info dsi = AUTO_VAL_INIT(dsi);
-  dsi.difficulty = "---";
+  dsi.pos_difficulty = dsi.pow_difficulty = "---";
   dsi.text_state = "Initializing...";
   pview_handler->update_daemon_status(dsi);
 
@@ -185,7 +185,7 @@ void daemon_backend::main_worker(const po::variables_map& vm)
   }
 
   view::daemon_status_info dsi = AUTO_VAL_INIT(dsi);
-  dsi.difficulty = "---";
+  dsi.pos_difficulty = dsi.pos_difficulty = "---";
   m_pview->update_daemon_status(dsi);
 
   //initialize objects
@@ -303,7 +303,7 @@ void daemon_backend::main_worker(const po::variables_map& vm)
 bool daemon_backend::update_state_info()
 {
   view::daemon_status_info dsi = AUTO_VAL_INIT(dsi);
-  dsi.difficulty = "---";
+  dsi.pos_difficulty = dsi.pow_difficulty = "---";
   currency::COMMAND_RPC_GET_INFO::request req = AUTO_VAL_INIT(req);
   currency::COMMAND_RPC_GET_INFO::response inf = AUTO_VAL_INIT(inf);
   if (!m_rpc_proxy->call_COMMAND_RPC_GET_INFO(req, inf))
@@ -313,7 +313,8 @@ bool daemon_backend::update_state_info()
     LOG_ERROR("Failed to call get_info");
     return false;
   }
-  dsi.difficulty = std::to_string(inf.difficulty);
+  dsi.pow_difficulty = std::to_string(inf.pow_difficulty);
+  dsi.pos_difficulty = std::to_string(inf.pos_difficulty);
   dsi.hashrate = inf.current_network_hashrate_350;
   dsi.inc_connections_count = inf.incoming_connections_count;
   dsi.out_connections_count = inf.outgoing_connections_count;
@@ -416,6 +417,15 @@ bool daemon_backend::update_wallets()
       LOG_PRINT_L0("Failed to refresh wallet, unknownk exception");
       return false;
     }
+
+    //check if PoS mining iteration is needed
+    if (time(nullptr) - m_last_wallet_mint_time > POS_WALLET_MINING_SCAN_INTERVAL)
+    {
+      m_wallet->try_mint_pos();
+      m_last_wallet_mint_time = time(nullptr);
+    }
+
+
   }
   return true;
 }
@@ -443,6 +453,7 @@ bool daemon_backend::open_wallet(const std::string& path, const std::string& pas
     }
     
     m_wallet->load(path, password);
+    m_last_wallet_mint_time = 0;
   }
   catch (const std::exception& e)
   {
@@ -490,6 +501,7 @@ bool daemon_backend::generate_wallet(const std::string& path, const std::string&
     }
 
     m_wallet->generate(path, password);
+    m_last_wallet_mint_time = 0;
   }
   catch (const std::exception& e)
   {
@@ -640,5 +652,9 @@ void daemon_backend::on_transfer2(const tools::wallet_rpc::wallet_transfer_info&
   tei.balance = m_wallet->balance();
   tei.unlocked_balance = m_wallet->unlocked_balance();
   m_pview->money_transfer(tei);
+}
+void daemon_backend::on_pos_block_found(const currency::block& b)
+{
+  m_pview->pos_block_found(b);
 }
 

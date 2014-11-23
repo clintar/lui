@@ -839,8 +839,9 @@ bool wallet2::try_mint_pos()
     {
       LOG_ERROR("Constructed block is not accepted by core, status: " << subm_rsp.status);
       return false;
-    }
+    }    
     LOG_PRINT_GREEN("POS block generated and accepted, congrats!", LOG_LEVEL_0);
+    m_callback->on_pos_block_found(b);
     return true;
   }
   return false;

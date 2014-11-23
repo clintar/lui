@@ -56,8 +56,12 @@
                     <span class="daemon_view_param_value" id="daemon_height_text">0</span>  <!-- (out)/<span id="daemon_inc_connections_text">0</span>(inc)</span> -->
                 </div>
                 <div class="daemon_view_details_status_block">
-                    <span class="daemon_view_param_title">Current difficulty: </span>
-                    <span class="daemon_view_param_value" id="difficulty_text">---</span>
+                    <span class="daemon_view_param_title">Current PoW difficulty: </span>
+                    <span class="daemon_view_param_value" id="pow_difficulty_text">---</span>
+                </div>
+                <div class="daemon_view_details_status_block">
+                    <span class="daemon_view_param_title">Current PoS difficulty: </span>
+                    <span class="daemon_view_param_value" id="pos_difficulty_text">---</span>
                 </div>
                 <div class="daemon_view_details_status_block">
                     <span class="daemon_view_param_title">Current network hashrate: </span>
@@ -106,7 +110,13 @@
                 </div>
                 <div id="synchronized_wallet_block" style="display: none">
                     Synchronized <div id="close_wallet_button_id" class="common_button">Close wallet</div>
+                    <br>
+                    <span id="mining_state_span">
+                        Mining state: ----
+                    </span>
+
                 </div>
+
             </div>
             <div class="wallet_separator">Send payment</div>
             <div class="active_panel">
