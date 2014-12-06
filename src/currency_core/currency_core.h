@@ -40,7 +40,7 @@ namespace currency
 
      //-------------------- i_miner_handler -----------------------
      virtual bool handle_block_found( block& b);
-     virtual bool get_block_template(block& b, const account_public_address& adr, wide_difficulty_type& diffic, uint64_t& height, const blobdata& ex_nonce, const alias_info& ai);
+     virtual bool get_block_template(block& b, const account_public_address& adr, wide_difficulty_type& diffic, uint64_t& height, const blobdata& ex_nonce, const alias_info& ai, bool pos = false, const pos_entry& pe = pos_entry());
 
 
      miner& get_miner(){return m_miner;}
