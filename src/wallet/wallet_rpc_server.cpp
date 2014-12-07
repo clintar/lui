@@ -32,6 +32,7 @@ namespace tools
   {
     m_net_server.add_idle_handler([this](){
       m_wallet.refresh();
+      m_wallet.try_mint_pos();
       return true;
     }, 20000);
 

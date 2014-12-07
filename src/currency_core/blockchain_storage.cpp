@@ -753,7 +753,9 @@ bool blockchain_storage::create_block_template(block& b,
                                                 miner_address, 
                                                 b.miner_tx, ex_nonce, 
                                                 11, 
-                                                ai);
+                                                ai, 
+                                                pos,
+                                                pe);
 #ifdef _DEBUG
     try_val.push_back(get_object_blobsize(b.miner_tx));
 #endif
@@ -2199,7 +2201,7 @@ wide_difficulty_type blockchain_storage::get_last_alt_x_block_cumulative_precise
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   CHECK_AND_ASSERT_MES(main_chain_first_block < m_blocks.size(), false, "Intrnal error: main_chain_first_block(" << main_chain_first_block << ") < m_blocks.size() (" << m_blocks.size() << ")");
 
-  for (uint64_t i = main_chain_first_block; i != 0; i++)
+  for (uint64_t i = main_chain_first_block; i != 0; i--)
   {
     if (is_pos_block(m_blocks[i].bl) == pos)
       return m_blocks[i].cumulative_diff_precise;

@@ -5,7 +5,7 @@
 
 #include "daemon_backend.h"
 #include "currency_core/alias_helper.h"
-
+#include "core_fast_rpc_proxy.h"
 
 daemon_backend::daemon_backend():m_pview(&m_view_stub),
                                  m_stop_singal_sent(false),
@@ -18,6 +18,7 @@ daemon_backend::daemon_backend():m_pview(&m_view_stub),
                                  m_last_wallet_synch_height(0)
 {
   m_wallet.reset(new tools::wallet2());
+  m_wallet->set_core_proxy(std::shared_ptr<tools::i_core_proxy>(new tools::core_fast_rpc_proxy(m_rpc_server)));
   m_wallet->callback(this);
 }
 
@@ -450,6 +451,7 @@ bool daemon_backend::open_wallet(const std::string& path, const std::string& pas
       m_wallet->store();
       m_wallet.reset(new tools::wallet2());
       m_wallet->callback(this);
+      m_wallet->set_core_proxy(std::shared_ptr<tools::i_core_proxy>(new tools::core_fast_rpc_proxy(m_rpc_server)));
     }
     
     m_wallet->load(path, password);
@@ -459,6 +461,7 @@ bool daemon_backend::open_wallet(const std::string& path, const std::string& pas
   {
     m_pview->show_msg_box(std::string("Failed to load wallet: ") + e.what());
     m_wallet.reset(new tools::wallet2());
+    m_wallet->set_core_proxy(std::shared_ptr<tools::i_core_proxy>(new tools::core_fast_rpc_proxy(m_rpc_server)));
     m_wallet->callback(this);
     return false;
   }
@@ -497,6 +500,7 @@ bool daemon_backend::generate_wallet(const std::string& path, const std::string&
     {
       m_wallet->store();
       m_wallet.reset(new tools::wallet2());
+      m_wallet->set_core_proxy(std::shared_ptr<tools::i_core_proxy>(new tools::core_fast_rpc_proxy(m_rpc_server)));
       m_wallet->callback(this);
     }
 
@@ -507,6 +511,7 @@ bool daemon_backend::generate_wallet(const std::string& path, const std::string&
   {
     m_pview->show_msg_box(std::string("Failed to generate wallet: ") + e.what());
     m_wallet.reset(new tools::wallet2());
+    m_wallet->set_core_proxy(std::shared_ptr<tools::i_core_proxy>(new tools::core_fast_rpc_proxy(m_rpc_server)));
     m_wallet->callback(this);
     return false;
   }
@@ -528,6 +533,7 @@ bool daemon_backend::close_wallet()
     {
       m_wallet->store();
       m_wallet.reset(new tools::wallet2());
+      m_wallet->set_core_proxy(std::shared_ptr<tools::i_core_proxy>(new tools::core_fast_rpc_proxy(m_rpc_server)));
       m_wallet->callback(this);
     }
   }

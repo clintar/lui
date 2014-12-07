@@ -454,7 +454,13 @@ namespace currency
     currency::blobdata blob_reserve = PROJECT_VERSION_LONG;
     blob_reserve.resize(blob_reserve.size() + 1 + req.reserve_size, 0);
     wide_difficulty_type dt = 0;
-    if (!m_core.get_block_template(b, acc, dt, res.height, blob_reserve, ai))
+    currency::pos_entry pe = AUTO_VAL_INIT(pe);
+    pe.amount = req.pos_amount;
+    pe.index = req.pos_index;
+    //pe.keyimage key image will be set in the wallet
+    //pe.wallet_index is not included in serialization map, TODO: refactoring here
+
+    if (!m_core.get_block_template(b, acc, dt, res.height, blob_reserve, ai, req.pos_block, pe))
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
       error_resp.message = "Internal error: failed to create block template";
