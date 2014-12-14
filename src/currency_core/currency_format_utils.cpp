@@ -138,7 +138,7 @@ namespace currency
       LOG_PRINT_L0("Block is too big");
       return false;
     }
-    block_reward += fee;
+    block_reward += fee/2;
 
     std::vector<size_t> out_amounts;
     decompose_amount_into_digits(block_reward, DEFAULT_DUST_THRESHOLD,

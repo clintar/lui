@@ -638,15 +638,15 @@ bool blockchain_storage::validate_miner_transaction(const block& b, size_t cumul
     LOG_PRINT_L0("block size " << cumulative_block_size << " is bigger than allowed for this blockchain");
     return false;
   }
-  if(base_reward + fee < money_in_use)
+  if(base_reward + fee/2 < money_in_use)
   {
     LOG_ERROR("coinbase transaction spend too much money (" << print_money(money_in_use) << "). Block reward is " << print_money(base_reward + fee) << "(" << print_money(base_reward) << "+" << print_money(fee) << ")");
     return false;
   }
-  if(base_reward + fee != money_in_use)
+  if(base_reward + fee/2 != money_in_use)
   {
     LOG_ERROR("coinbase transaction doesn't use full amount of block reward:  spent: "
-                            << print_money(money_in_use) << ",  block reward " << print_money(base_reward + fee) << "(" << print_money(base_reward) << "+" << print_money(fee) << ")");
+                            << print_money(money_in_use) << ",  block reward " << print_money(base_reward + fee/2) << "(" << print_money(base_reward) << "+" << print_money(fee) << "/2)");
     return false;
   }  
   return true;
@@ -1430,12 +1430,14 @@ void blockchain_storage::print_blockchain(uint64_t start_index, uint64_t end_ind
 
   for(size_t i = start_index; i != m_blocks.size() && i != end_index; i++)
   {
-    ss << "height " << i << ", timestamp " << m_blocks[i].bl.timestamp 
-      << ", cumul_diff_adj " << m_blocks[i].cumulative_diff_adjusted 
-      << ", cumul_diff_pcs " << m_blocks[i].cumulative_diff_precise
-      << ", cumul_size " << m_blocks[i].block_cumulative_size
-      << "\nid\t\t" <<  get_block_hash(m_blocks[i].bl)
-      << "\ndifficulty\t\t" << block_difficulty(i) << ", nonce " << m_blocks[i].bl.nonce << ", tx_count " << m_blocks[i].bl.tx_hashes.size() << ENDL;
+    ss << (is_pos_block(m_blocks[i].bl) ? "[PoS]" : "[PoW]") << "h: " << i << ", timestamp: " << m_blocks[i].bl.timestamp
+      << ", cumul_diff_adj: " << m_blocks[i].cumulative_diff_adjusted
+      << ", cumul_diff_pcs: " << m_blocks[i].cumulative_diff_precise
+      << ", cumul_diff_adj_delta: " << m_blocks[i].cumulative_diff_adjusted - m_blocks[i ? i - 1 : 0].cumulative_diff_adjusted
+      //<< ", cumul_diff_pcs_delta: " << m_blocks[i].cumulative_diff_precise - m_blocks[i ? i - 1 : 0].cumulative_diff_precise
+      << ", cumul_size: " << m_blocks[i].block_cumulative_size
+      << ", id: " <<  get_block_hash(m_blocks[i].bl)
+      << ", difficulty: " << block_difficulty(i) << ", nonce " << m_blocks[i].bl.nonce << ", tx_count " << m_blocks[i].bl.tx_hashes.size() << ENDL;
   }
   LOG_PRINT_L1("Current blockchain:" << ENDL << ss.str());
   LOG_PRINT_L0("Blockchain printed with log level 1");
