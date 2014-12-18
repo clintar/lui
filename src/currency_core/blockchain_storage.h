@@ -286,14 +286,14 @@ namespace currency
   /*                                                                      */
   /************************************************************************/
 
-  #define CURRENT_BLOCKCHAIN_STORAGE_ARCHIVE_VER          27
+  #define CURRENT_BLOCKCHAIN_STORAGE_ARCHIVE_VER          28
   #define CURRENT_TRANSACTION_CHAIN_ENTRY_ARCHIVE_VER     3
   #define CURRENT_BLOCK_EXTENDED_INFO_ARCHIVE_VER         1
 
   template<class archive_t>
   void blockchain_storage::serialize(archive_t & ar, const unsigned int version)
   {
-    if(version < 22)
+    if(version < 28)
       return;
     CHECK_PROJECT_NAME();
     CRITICAL_REGION_LOCAL(m_blockchain_lock);
@@ -301,11 +301,6 @@ namespace currency
     ar & m_blocks_index;
     ar & m_transactions;
     ar & m_spent_keys;
-
-    //do not keep alternative blocks
-    if(version < 27)
-      ar & m_alternative_chains;
-
     ar & m_outputs;
     ar & m_invalid_blocks;
     ar & m_current_block_cumul_sz_limit;
@@ -316,11 +311,7 @@ namespace currency
     /*---- serialization bug workaround ----*/    
     
     /*serialization m_alternative_chains excluding*/
-    uint64_t total_check_count = 0;
-    if (archive_t::is_loading::value && version < 27)
-      total_check_count = m_blocks.size() + m_blocks_index.size() + m_transactions.size() + m_spent_keys.size() + m_alternative_chains.size() + m_outputs.size() + m_invalid_blocks.size() + m_current_block_cumul_sz_limit;
-    else
-      total_check_count = m_blocks.size() + m_blocks_index.size() + m_transactions.size() + m_spent_keys.size() + m_outputs.size() + m_invalid_blocks.size() + m_current_block_cumul_sz_limit;
+    uint64_t total_check_count = m_blocks.size() + m_blocks_index.size() + m_transactions.size() + m_spent_keys.size() + m_outputs.size() + m_invalid_blocks.size() + m_current_block_cumul_sz_limit;
 
     if(archive_t::is_saving::value)
     {
@@ -347,28 +338,12 @@ namespace currency
       }
     }
 
-    if(version < 25)
-    {
-      //re-sync spent flags
-      if(!resync_spent_tx_flags())
-      {
-        LOG_ERROR("resync_spent_tx_flags() failed.");
-        throw std::runtime_error("resync_spent_tx_flags() failed.");
-      }
-    }
-
-    if(version < 26)
-      m_current_pruned_rs_height = 0;
-    else 
-      ar & m_current_pruned_rs_height;
+    ar & m_current_pruned_rs_height;
     
     if(archive_t::is_loading::value)
     {
       prune_ring_signatures_if_need();
     }
-
-
-
     LOG_PRINT_L2("Blockchain storage:" << ENDL << 
         "m_blocks: " << m_blocks.size() << ENDL  << 
         "m_blocks_index: " << m_blocks_index.size() << ENDL  << 
