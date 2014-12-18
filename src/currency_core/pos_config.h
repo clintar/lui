@@ -19,7 +19,7 @@ namespace currency
     pos_config pc = AUTO_VAL_INIT(pc);
     pc.min_coinage = POS_MIN_COINAGE;
     pc.max_coinage = POS_MAX_COINAGE;
-    pc.pos_minimum_heigh = (60 * 60 * 24) / DIFFICULTY_TOTAL_TARGET;
+    pc.pos_minimum_heigh = (60 * 60) / DIFFICULTY_TOTAL_TARGET;
     return pc;
   }
 }
