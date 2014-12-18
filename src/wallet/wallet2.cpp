@@ -396,7 +396,6 @@ void wallet2::scan_tx_pool()
     //check if we have spendings
     uint64_t tx_money_spent_in_ins = 0;
     // check all outputs for spending (compare key images)
-    size_t i = 0;
     for(auto& in: tx.vin)
     {
       if (in.type() != typeid(currency::txin_to_key))
