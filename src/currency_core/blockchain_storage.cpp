@@ -1026,7 +1026,7 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
       cumulative_diff_delta = current_diff;
 
     size_t n = get_current_sequence_factor_for_alt(alt_chain, pos_block);
-    if (m_blocks.size()*DIFFICULTY_TOTAL_TARGET > m_pos_config.pos_minimum_heigh)
+    if (m_blocks.size() >= m_pos_config.pos_minimum_heigh)
       cumulative_diff_delta = correct_difficulty_with_sequence_factor(n, cumulative_diff_delta);
 
     bei.cumulative_diff_adjusted += cumulative_diff_delta;
@@ -2280,8 +2280,7 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
   wide_difficulty_type this_coin_diff = 0;
   bool is_pos_bl = is_pos_block(bl);
   //check if PoS allowed in this height
-  if (is_pos_bl && m_blocks.size() < m_pos_config.pos_minimum_heigh)
-    return false;
+  CHECK_AND_ASSERT_MES(!(is_pos_bl && m_blocks.size() < m_pos_config.pos_minimum_heigh), false, "PoS block not allowed on height " << m_blocks.size());
 
   //check proof of work
   TIME_MEASURE_START(target_calculating_time);
@@ -2432,7 +2431,7 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
     cumulative_diff_delta += current_diffic;
  
   size_t n = get_current_sequence_factor(is_pos_bl);
-  if (m_blocks.size()*DIFFICULTY_TOTAL_TARGET > m_pos_config.pos_minimum_heigh)
+  if (m_blocks.size() >= m_pos_config.pos_minimum_heigh)
     cumulative_diff_delta = correct_difficulty_with_sequence_factor(n, cumulative_diff_delta);
   
   bei.cumulative_diff_adjusted += cumulative_diff_delta;
