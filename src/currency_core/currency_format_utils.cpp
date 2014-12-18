@@ -80,16 +80,19 @@ namespace currency
   //---------------------------------------------------------------
   uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age)
   {
-
-/*    if (coin_age < m_pos_config.min_coinage)
-      return 0;
-    else if (coin_age > m_pos_config.max_coinage)
-      coin_age = m_pos_config.max_coinage;
-*/
-    return amount;// coin_age / (60 * 60 * 24);
+    return amount;
+  }
+  //---------------------------------------------------------------
+  wide_difficulty_type correct_difficulty_with_sequence_factor(size_t sequence_factor, wide_difficulty_type diff)
+  {
+    //delta=delta*(0.75^n)
+    for (size_t i = 0; i != sequence_factor; i++)
+    {
+      diff = diff - diff / 4;
+    }
+    return diff;
   }
   //------------------------------------------------------------------
-
   bool construct_miner_tx(size_t height, size_t median_size, uint64_t already_generated_coins, 
                                                              size_t current_block_size, 
                                                              uint64_t fee, 

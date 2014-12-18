@@ -79,6 +79,8 @@ bool gen_pos_basic_tests::configure_core(currency::core& c, size_t ev_index, con
 {
   currency::pos_config pc = get_default_pos_config();
   pc.min_coinage = DIFFICULTY_POW_TARGET * 10; //four blocks
+  pc.pos_minimum_heigh = 4; //four blocks
+
   c.get_blockchain_storage().set_pos_config(pc);
   return true;
 }

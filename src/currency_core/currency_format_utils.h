@@ -11,6 +11,7 @@
 #include "crypto/crypto.h"
 #include "crypto/hash.h"
 #include "crypto/wild_keccak.h"
+#include "difficulty.h"
 
 #define MAX_ALIAS_LEN         255
 #define VALID_ALIAS_CHARS     "0123456789abcdefghijklmnopqrstuvwxyz-."
@@ -150,6 +151,7 @@ namespace currency
   bool is_pos_block(const block& b);
   bool is_pos_block(const transaction& tx);
   uint64_t get_coinday_weight(uint64_t amount, uint64_t coin_age);
+  wide_difficulty_type correct_difficulty_with_sequence_factor(size_t sequence_factor, wide_difficulty_type diff);
 
   void print_currency_details();
     

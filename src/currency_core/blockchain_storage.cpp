@@ -847,7 +847,6 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
     LOG_PRINT_RED_L0("Block with id: " << id << "[" << get_block_height(b)  << "]" << ENDL << " for alternative chain, is under checkpoint zone, declined");
     bvc.m_verifivation_failed = true;
     return false;
-
   }
 
   TRY_ENTRY();
@@ -935,6 +934,10 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
         alt_scratchppad_patch[ml.first] = crypto::xor_pod(alt_scratchppad_patch[ml.first], ml.second);
     }
     bool pos_block = is_pos_block(bei.bl);
+    //check if PoS block allowed on this height
+    CHECK_AND_ASSERT_MES(!(pos_block && bei.height < m_pos_config.pos_minimum_heigh), false, "PoS block is not allowed on this height");
+
+
     wide_difficulty_type current_diff = get_next_difficulty_for_alternative_chain(alt_chain, bei, pos_block);
     CHECK_AND_ASSERT_MES(current_diff, false, "!!!!!!! DIFFICULTY OVERHEAD !!!!!!!");
     
@@ -1014,12 +1017,19 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
 
     }
     bei.difficulty = current_diff;
-    
+    wide_difficulty_type cumulative_diff_delta = 0;
     bei.cumulative_diff_adjusted = alt_chain.size() ? it_prev->second.cumulative_diff_adjusted : m_blocks[it_main_prev->second].cumulative_diff_adjusted;
+    
     if (pos_block)
-      bei.cumulative_diff_adjusted += get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain, bei.height, current_diff);
+      cumulative_diff_delta = get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain, bei.height, current_diff);
     else
-      bei.cumulative_diff_adjusted += current_diff;
+      cumulative_diff_delta = current_diff;
+
+    size_t n = get_current_sequence_factor_for_alt(alt_chain, pos_block);
+    if (m_blocks.size()*DIFFICULTY_TOTAL_TARGET > m_pos_config.pos_minimum_heigh)
+      cumulative_diff_delta = correct_difficulty_with_sequence_factor(n, cumulative_diff_delta);
+
+    bei.cumulative_diff_adjusted += cumulative_diff_delta;
 
     bei.cumulative_diff_precise = get_last_alt_x_block_cumulative_precise_difficulty(alt_chain, bei.height, pos_block);
     bei.cumulative_diff_precise += current_diff;
@@ -1416,6 +1426,38 @@ wide_difficulty_type blockchain_storage::block_difficulty(size_t i)
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   CHECK_AND_ASSERT_MES(i < m_blocks.size(), false, "wrong block index i = " << i << " at blockchain_storage::block_difficulty()");
   return m_blocks[i].difficulty;
+}
+//------------------------------------------------------------------
+size_t blockchain_storage::get_current_sequence_factor(bool pos)
+{
+  size_t n = 0;
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+  for (auto it = m_blocks.rbegin(); it != m_blocks.rend(); it++, n++)
+  {
+    if (pos != is_pos_block(it->bl))
+      break;
+  }
+  return true;
+}
+//------------------------------------------------------------------
+size_t blockchain_storage::get_current_sequence_factor_for_alt(alt_chain_list& alt_chain, bool pos)
+{
+  size_t n = 0;
+  for (auto it = alt_chain.rbegin(); it != alt_chain.rend(); it++, n++)
+  {
+    if (pos != is_pos_block((*it)->second.bl))
+      return n;
+  }
+
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+  for (auto it = m_blocks.rbegin(); it != m_blocks.rend(); ++it)
+  {
+    if (pos != is_pos_block(it->bl))
+    {
+      return n;
+    }
+  }
+  return n;
 }
 //------------------------------------------------------------------
 void blockchain_storage::print_blockchain(uint64_t start_index, uint64_t end_index)
@@ -2237,6 +2279,10 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
   uint64_t coin_age = 0; 
   wide_difficulty_type this_coin_diff = 0;
   bool is_pos_bl = is_pos_block(bl);
+  //check if PoS allowed in this height
+  if (is_pos_bl && m_blocks.size() < m_pos_config.pos_minimum_heigh)
+    return false;
+
   //check proof of work
   TIME_MEASURE_START(target_calculating_time);
   wide_difficulty_type current_diffic = get_next_diff_conditional(is_pos_bl);
@@ -2379,11 +2425,18 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
   }
 
   //adjusted difficulty - difficulty used to switch blockchain
+  wide_difficulty_type cumulative_diff_delta = 0;
   if (is_pos_bl)
-    bei.cumulative_diff_adjusted += get_adjusted_cumulative_difficulty_for_next_pos(current_diffic);
+    cumulative_diff_delta = get_adjusted_cumulative_difficulty_for_next_pos(current_diffic);
   else
-    bei.cumulative_diff_adjusted += current_diffic;
+    cumulative_diff_delta += current_diffic;
  
+  size_t n = get_current_sequence_factor(is_pos_bl);
+  if (m_blocks.size()*DIFFICULTY_TOTAL_TARGET > m_pos_config.pos_minimum_heigh)
+    cumulative_diff_delta = correct_difficulty_with_sequence_factor(n, cumulative_diff_delta);
+  
+  bei.cumulative_diff_adjusted += cumulative_diff_delta;
+
   //etc 
   bei.already_generated_coins = already_generated_coins + base_reward;
   bei.height = m_blocks.size();

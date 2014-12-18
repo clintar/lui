@@ -26,7 +26,6 @@
 #include "crypto/hash.h"
 #include "checkpoints.h"
 #include "pos_config.h"
-
 POD_MAKE_HASHABLE(currency, account_public_address);
 
 namespace currency
@@ -278,7 +277,8 @@ namespace currency
     wide_difficulty_type get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain_list& alt_chain, uint64_t block_height, wide_difficulty_type next_diff);
     uint64_t get_last_x_block_height(bool pos);
     wide_difficulty_type get_last_alt_x_block_cumulative_precise_difficulty(alt_chain_list& alt_chain, uint64_t block_height, bool pos);
-
+    size_t get_current_sequence_factor(bool pos);
+    size_t get_current_sequence_factor_for_alt(alt_chain_list& alt_chain, bool pos);
   };
 
 
