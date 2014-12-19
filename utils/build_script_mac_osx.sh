@@ -1,4 +1,4 @@
-cd boolberry
+cd lui
 if [ $? -ne 0 ]; then
     echo "Failed to cd boolberry"
     exit $?
