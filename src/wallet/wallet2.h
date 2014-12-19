@@ -137,7 +137,7 @@ namespace tools
     void refresh(size_t & blocks_fetched, bool& received_money);
     bool refresh(size_t & blocks_fetched, bool& received_money, bool& ok);
     
-    bool set_core_proxy(std::shared_ptr<i_core_proxy>& proxy);
+    bool set_core_proxy(const std::shared_ptr<i_core_proxy>& proxy);
     std::shared_ptr<i_core_proxy> get_core_proxy();
     uint64_t balance();
     uint64_t unlocked_balance();

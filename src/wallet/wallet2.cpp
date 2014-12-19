@@ -45,7 +45,7 @@ void wallet2::init(const std::string& daemon_address)
   m_core_proxy->set_connection_addr(daemon_address);
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::set_core_proxy(std::shared_ptr<i_core_proxy>& proxy)
+bool wallet2::set_core_proxy(const std::shared_ptr<i_core_proxy>& proxy)
 {
   m_core_proxy = proxy;
   return true;
