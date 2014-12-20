@@ -539,10 +539,7 @@ function on_set_recent_transfers(o)
 
 function on_start_stop_wallet_mining()
 {
-    if($('wallet_start_stop_mining').text() === 'Stop mining')
-    {
-
-    }
+    Qt_parent.toggle_mining();
 }
 
 function secure_request_url_result_handler(info_obj)
@@ -591,7 +588,6 @@ function init_btc_exchange_rate()
 function update_pos_mining_text(txt)
 {
     $("#mining_state_span").text(txt);
-
 }
 
 function str_to_obj(str)
