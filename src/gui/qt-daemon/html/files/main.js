@@ -320,6 +320,10 @@ function on_update_wallet_info(wal_status)
         }
     }
 
+    if(wal_status.do_mint)
+        $("#wallet_start_stop_mining").text("Stop mining");
+    else
+        $("#wallet_start_stop_mining").text("Start mining");
 }
 
 function on_money_transfer(tei)
@@ -533,6 +537,13 @@ function on_set_recent_transfers(o)
     $("#unconfirmed_transfers_container_id").prepend(str);
 }
 
+function on_start_stop_wallet_mining()
+{
+    if($('wallet_start_stop_mining').text() === 'Stop mining')
+    {
+
+    }
+}
 
 function secure_request_url_result_handler(info_obj)
 {
@@ -605,6 +616,7 @@ $(function()
     $('#transfer_button_id').on('click',  on_transfer);
     $('#generate_wallet_button').on('click',  on_generate_new_wallet);
     $('#close_wallet_button_id').on('click',  on_close_wallet);
+    $('#wallet_start_stop_mining').on('click', on_start_stop_wallet_mining)
 
     setTimeout(init_btc_exchange_rate, 100);
 
