@@ -153,7 +153,11 @@ bool Html5ApplicationViewer::init_config()
   }
   return true;
 }
-
+bool Html5ApplicationViewer::togle_mining()
+{
+  m_backend.togle_pos_mining();
+  return true;
+}
 bool Html5ApplicationViewer::store_config()
 {
   epee::serialization::store_t_to_json_file(m_config, m_backend.get_config_folder() + "/" + GUI_CONFIG_FILENAME);

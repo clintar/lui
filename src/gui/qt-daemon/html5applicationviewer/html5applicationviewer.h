@@ -54,6 +54,7 @@ protected:
   QString request_uri(const QString& url_str, const QString& params, const QString& callbackname);
   QString request_aliases();
   bool init_config();
+  bool togle_mining();
   void trayIconActivated(QSystemTrayIcon::ActivationReason reason);
 
 private:

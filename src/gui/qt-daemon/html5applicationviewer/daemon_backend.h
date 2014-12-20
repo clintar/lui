@@ -48,6 +48,7 @@ public:
   bool open_wallet(const std::string& path, const std::string& password);
   bool generate_wallet(const std::string& path, const std::string& password);
   bool close_wallet();
+  void togle_pos_mining();
   bool transfer(const view::transfer_params& tp, currency::transaction& res_tx);
   bool get_aliases(view::alias_set& al_set);
   std::string get_config_folder();
@@ -76,6 +77,7 @@ private:
   std::atomic<uint64_t> m_last_daemon_height;
   std::atomic<uint64_t> m_last_wallet_synch_height;
   std::atomic<uint64_t> m_last_wallet_mint_time;
+  std::atomic<bool> m_do_mint;
 
   std::string m_data_dir;
 

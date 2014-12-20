@@ -88,6 +88,9 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::is_remote_ip_allowed(uint32_t addr)
   {
+    //@#@ workaround 
+    return true;
+
     CRITICAL_REGION_LOCAL(m_blocked_ips_lock);
     auto it = m_blocked_ips.find(addr);
     if(it == m_blocked_ips.end())
@@ -417,7 +420,7 @@ namespace nodetool
 
       if(code < 0)
       {
-        LOG_PRINT_CC_RED(context, "COMMAND_HANDSHAKE invoke failed. (" << code <<  ", " << levin::get_err_descr(code) << ")", LOG_LEVEL_1);
+        LOG_PRINT_CC_RED(context, "COMMAND_HANDSHAKE invoke failed. (" << code <<  ", " << levin::get_err_descr(code) << ")", LOG_LEVEL_0);
         return;
       }
 
@@ -454,7 +457,7 @@ namespace nodetool
 
         if(rsp.node_data.peer_id == m_config.m_peer_id)
         {
-          LOG_PRINT_CCONTEXT_L2("Connection to self detected, dropping connection");
+          LOG_PRINT_CCONTEXT_L0("Connection to self detected, dropping connection");
           hsh_result = false;
           return;
         }

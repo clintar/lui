@@ -15,7 +15,8 @@ daemon_backend::daemon_backend():m_pview(&m_view_stub),
                                  m_rpc_server(m_ccore, m_p2psrv),
                                  m_rpc_proxy(new tools::core_fast_rpc_proxy(m_rpc_server)),
                                  m_last_daemon_height(0),
-                                 m_last_wallet_synch_height(0)
+                                 m_last_wallet_synch_height(0),
+                                 m_do_mint(true)
 {
   m_wallet.reset(new tools::wallet2());
   m_wallet->set_core_proxy(std::shared_ptr<tools::i_core_proxy>(new tools::core_fast_rpc_proxy(m_rpc_server)));
@@ -40,10 +41,6 @@ bool daemon_backend::start(int argc, char* argv[], view::i_view* pview_handler)
   dsi.pos_difficulty = dsi.pow_difficulty = "---";
   dsi.text_state = "Initializing...";
   pview_handler->update_daemon_status(dsi);
-
-  //#ifdef WIN32
-  //_CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
-  //#endif
 
   log_space::get_set_log_detalisation_level(true, LOG_LEVEL_0);
   LOG_PRINT_L0("Initing...");
@@ -115,6 +112,12 @@ bool daemon_backend::start(int argc, char* argv[], view::i_view* pview_handler)
   {
      log_space::log_singletone::add_logger(LOGGER_CONSOLE, NULL, NULL);
   }
+  if (command_line::has_arg(vm, command_line::arg_log_level))
+  {
+    log_space::log_singletone::get_set_log_detalisation_level(true, command_line::get_arg(vm, command_line::arg_log_level));
+  }
+
+  
 
   std::string path_to_html;
   if (!command_line::has_arg(vm, arg_html_folder))
@@ -351,7 +354,6 @@ bool daemon_backend::update_state_info()
 
 
   m_last_daemon_height = dsi.height = inf.height;
-
   m_pview->update_daemon_status(dsi);
   return true;
 }
@@ -420,7 +422,7 @@ bool daemon_backend::update_wallets()
     }
 
     //check if PoS mining iteration is needed
-    if (time(nullptr) - m_last_wallet_mint_time > POS_WALLET_MINING_SCAN_INTERVAL)
+    if (m_do_mint && time(nullptr) - m_last_wallet_mint_time > POS_WALLET_MINING_SCAN_INTERVAL)
     {
       m_wallet->try_mint_pos();
       m_last_wallet_mint_time = time(nullptr);
@@ -429,6 +431,12 @@ bool daemon_backend::update_wallets()
 
   }
   return true;
+}
+
+void daemon_backend::togle_pos_mining()
+{
+  m_do_mint = !m_do_mint;
+  update_wallet_info();
 }
 
 void daemon_backend::loop()
@@ -642,6 +650,7 @@ bool daemon_backend::update_wallet_info()
   wi.balance = m_wallet->balance();
   wi.unlocked_balance = m_wallet->unlocked_balance();
   wi.path = m_wallet->get_wallet_path();
+  wi.do_mint = m_do_mint;
   m_pview->update_wallet_info(wi);
   return true;
 }

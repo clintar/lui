@@ -1042,6 +1042,14 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
     CHECK_AND_ASSERT_MES(i_res.second, false, "insertion of new alternative block returned as it already exist");
     alt_chain.push_back(i_res.first);
     //check if difficulty bigger then in main chain
+
+    LOG_PRINT_BLUE("----- BLOCK ADDED AS ALTERNATIVE ON HEIGHT " << bei.height
+      << ENDL << "id:\t" << id
+      << ENDL << "PoW:\t" << proof_of_work
+      << ENDL << "difficulty:\t" << current_diff
+      << ENDL << "adjusted_cumulative_difficulty:\t" << bei.cumulative_diff_adjusted << "(curren mainchain cumul_diff: " << m_blocks.back().cumulative_diff_adjusted << ")"
+      , LOG_LEVEL_0);
+
     if (m_blocks.back().cumulative_diff_adjusted < bei.cumulative_diff_adjusted)
     {
       //do reorganize!
@@ -1052,12 +1060,6 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
       else bvc.m_verifivation_failed = true;
       return r;
     }
-    LOG_PRINT_BLUE("----- BLOCK ADDED AS ALTERNATIVE ON HEIGHT " << bei.height
-      << ENDL << "id:\t" << id
-      << ENDL << "PoW:\t" << proof_of_work
-      << ENDL << "difficulty:\t" << current_diff
-      << ENDL << "adjusted_cumulative_difficulty:\t" << bei.cumulative_diff_adjusted << "(curren mainchain cumul_diff: " << m_blocks.back().cumulative_diff_adjusted << ")"
-      , LOG_LEVEL_0);
     return true;
   }else
   {
@@ -2178,7 +2180,7 @@ wide_difficulty_type blockchain_storage::get_adjusted_cumulative_difficulty_for_
   wide_difficulty_type last_pow_diff = 0;
   wide_difficulty_type last_pos_diff = 0;
 
-  for (auto it = alt_chain.rbegin(); it != alt_chain.rend() && !(last_pow_diff && last_pow_diff); it++)
+  for (auto it = alt_chain.rbegin(); it != alt_chain.rend() && !(last_pos_diff && last_pow_diff); it++)
   {
     if (is_pos_block((*it)->second.bl ))
     {
@@ -2197,7 +2199,7 @@ wide_difficulty_type blockchain_storage::get_adjusted_cumulative_difficulty_for_
   }
 
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
-  for (auto it = m_blocks.rbegin(); it != m_blocks.rend() && !(last_pow_diff && last_pow_diff); ++it)
+  for (auto it = m_blocks.rbegin(); it != m_blocks.rend() && !(last_pos_diff && last_pow_diff); ++it)
   {
     if (is_pos_block(it->bl))
     {
@@ -2479,7 +2481,7 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
   }
   LOG_PRINT_L1("+++++ BLOCK SUCCESSFULLY ADDED" << (is_pos_bl ? "[PoS]":"[PoW]") << ENDL << "id:\t" << id
     << ENDL << powpos_str_entry.str()
-    << ENDL << "HEIGHT " << bei.height << ", difficulty:\t" << current_diffic
+    << ENDL << "HEIGHT " << bei.height << ", difficulty:\t" << current_diffic << "cumul_diff_adj: " << bei.cumulative_diff_adjusted
     << ENDL << "block reward: " << print_money(fee_summary + base_reward) << "(" << print_money(base_reward) << " + " << print_money(fee_summary) 
     << ")" << ", coinbase_blob_size: " << coinbase_blob_size << ", cumulative size: " << cumulative_block_size
     << ", " << block_processing_time << "("<< target_calculating_time << "/" << longhash_calculating_time << ")ms");
