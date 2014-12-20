@@ -214,7 +214,7 @@ namespace tools
     void handle_money_spent2(const currency::block& b, const currency::transaction& in_tx, uint64_t amount, const money_transfer2_details& td, const std::string& recipient, const std::string& recipient_alias);
     std::string get_alias_for_address(const std::string& addr);
     void wallet_transfer_info_from_unconfirmed_transfer_details(const unconfirmed_transfer_details& utd, wallet_rpc::wallet_transfer_info& wti);
-
+    bool is_coin_age_okay(const transfer_details& tr);
 
     currency::account_base m_account;
     std::string m_wallet_file;

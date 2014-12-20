@@ -153,9 +153,9 @@ bool Html5ApplicationViewer::init_config()
   }
   return true;
 }
-bool Html5ApplicationViewer::togle_mining()
+bool Html5ApplicationViewer::toggle_mining()
 {
-  m_backend.togle_pos_mining();
+  m_backend.toggle_pos_mining();
   return true;
 }
 bool Html5ApplicationViewer::store_config()

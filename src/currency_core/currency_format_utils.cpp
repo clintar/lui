@@ -142,6 +142,12 @@ namespace currency
       return false;
     }
     block_reward += fee/2;
+    
+    //send PoS entry back to owner
+    if (pos)
+    {
+      block_reward += pe.amount;
+    }
 
     std::vector<size_t> out_amounts;
     decompose_amount_into_digits(block_reward, DEFAULT_DUST_THRESHOLD,
@@ -642,6 +648,28 @@ namespace currency
 
     }
     return true;
+  }
+  //------------------------------------------------------------------
+  bool is_tx_spendtime_unlocked(uint64_t unlock_time, uint64_t current_blockchain_height)
+  {
+    if (unlock_time < CURRENCY_MAX_BLOCK_NUMBER)
+    {
+      //interpret as block index
+      if (current_blockchain_height - 1 + CURRENCY_LOCKED_TX_ALLOWED_DELTA_BLOCKS >= unlock_time)
+        return true;
+      else
+        return false;
+    }
+    else
+    {
+      //interpret as time
+      uint64_t current_time = static_cast<uint64_t>(time(NULL));
+      if (current_time + CURRENCY_LOCKED_TX_ALLOWED_DELTA_SECONDS >= unlock_time)
+        return true;
+      else
+        return false;
+    }
+    return false;
   }
   //-----------------------------------------------------------------------------------------------
   bool check_outs_valid(const transaction& tx)

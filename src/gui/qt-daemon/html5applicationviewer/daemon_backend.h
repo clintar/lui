@@ -48,7 +48,7 @@ public:
   bool open_wallet(const std::string& path, const std::string& password);
   bool generate_wallet(const std::string& path, const std::string& password);
   bool close_wallet();
-  void togle_pos_mining();
+  void toggle_pos_mining();
   bool transfer(const view::transfer_params& tp, currency::transaction& res_tx);
   bool get_aliases(view::alias_set& al_set);
   std::string get_config_folder();

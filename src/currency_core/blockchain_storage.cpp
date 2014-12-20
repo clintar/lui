@@ -630,6 +630,12 @@ bool blockchain_storage::validate_miner_transaction(const block& b, size_t cumul
   {
     money_in_use += o.amount;
   }
+  uint64_t pos_income = 0;
+  if (is_pos_block(b))
+  {
+    CHECK_AND_ASSERT_MES(b.miner_tx.vin[1].type() == typeid(txin_to_key), false, "Wrong miner tx_in");
+    pos_income = boost::get<txin_to_key>(b.miner_tx.vin[1]).amount;
+  }
 
   std::vector<size_t> last_blocks_sizes;
   get_last_n_blocks_sizes(last_blocks_sizes, CURRENCY_REWARD_BLOCKS_WINDOW);
@@ -638,15 +644,15 @@ bool blockchain_storage::validate_miner_transaction(const block& b, size_t cumul
     LOG_PRINT_L0("block size " << cumulative_block_size << " is bigger than allowed for this blockchain");
     return false;
   }
-  if(base_reward + fee/2 < money_in_use)
+  if (base_reward + pos_income + fee / 2 < money_in_use)
   {
-    LOG_ERROR("coinbase transaction spend too much money (" << print_money(money_in_use) << "). Block reward is " << print_money(base_reward + fee) << "(" << print_money(base_reward) << "+" << print_money(fee) << ")");
+    LOG_ERROR("coinbase transaction spend too much money (" << print_money(money_in_use) << "). Block reward is " << print_money(base_reward + pos_income + fee) << "(" << print_money(base_reward) << "+" << print_money(pos_income) << "+" << print_money(fee) << ")");
     return false;
   }
-  if(base_reward + fee/2 != money_in_use)
+  if (base_reward + pos_income + fee / 2 != money_in_use)
   {
     LOG_ERROR("coinbase transaction doesn't use full amount of block reward:  spent: "
-                            << print_money(money_in_use) << ",  block reward " << print_money(base_reward + fee/2) << "(" << print_money(base_reward) << "+" << print_money(fee) << "/2)");
+      << print_money(money_in_use) << ",  block reward " << print_money(base_reward + pos_income + fee / 2) << "(" << print_money(base_reward) << "+" << print_money(pos_income) << "+" << print_money(fee) << "/2)");
     return false;
   }  
   return true;
@@ -1958,23 +1964,7 @@ bool blockchain_storage::check_tx_inputs(const transaction& tx, const crypto::ha
 //------------------------------------------------------------------
 bool blockchain_storage::is_tx_spendtime_unlocked(uint64_t unlock_time)
 {
-  if(unlock_time < CURRENCY_MAX_BLOCK_NUMBER)
-  {
-    //interpret as block index
-    if(get_current_blockchain_height()-1 + CURRENCY_LOCKED_TX_ALLOWED_DELTA_BLOCKS >= unlock_time)
-      return true;
-    else
-      return false;
-  }else
-  {
-    //interpret as time
-    uint64_t current_time = static_cast<uint64_t>(time(NULL));
-    if(current_time + CURRENCY_LOCKED_TX_ALLOWED_DELTA_SECONDS >= unlock_time)
-      return true;
-    else
-      return false;
-  }
-  return false;
+  return currency::is_tx_spendtime_unlocked(unlock_time, get_current_blockchain_height());
 }
 //------------------------------------------------------------------
 bool blockchain_storage::check_tx_input(const txin_to_key& txin, const crypto::hash& tx_prefix_hash, const std::vector<crypto::signature>& sig, uint64_t* pmax_related_block_height)

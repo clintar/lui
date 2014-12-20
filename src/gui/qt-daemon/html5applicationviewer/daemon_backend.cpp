@@ -433,7 +433,7 @@ bool daemon_backend::update_wallets()
   return true;
 }
 
-void daemon_backend::togle_pos_mining()
+void daemon_backend::toggle_pos_mining()
 {
   m_do_mint = !m_do_mint;
   update_wallet_info();

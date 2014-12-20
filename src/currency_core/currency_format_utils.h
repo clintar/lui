@@ -112,6 +112,7 @@ namespace currency
   bool pop_block_scratchpad_data(const block& b, std::vector<crypto::hash>& scratchpd);
   bool apply_scratchpad_patch(std::vector<crypto::hash>& scratchpd, std::map<uint64_t, crypto::hash>& patch);
   bool is_mixattr_applicable_for_fake_outs_counter(uint8_t mix_attr, uint64_t fake_attr_count);
+  bool is_tx_spendtime_unlocked(uint64_t unlock_time, uint64_t current_blockchain_height);
 
   crypto::hash get_transaction_hash(const transaction& t);
   bool get_transaction_hash(const transaction& t, crypto::hash& res);

@@ -716,6 +716,17 @@ bool wallet2::get_transfer_address(const std::string& adr_str, currency::account
   return m_core_proxy->get_transfer_address(adr_str, addr);
 }
 //----------------------------------------------------------------------------------------------------
+bool wallet2::is_coin_age_okay(const transfer_details& tr)
+{
+  //blockchain conditions
+  if (!is_transfer_unlocked(tr))
+    return false;
+
+  //TODO: add extra coinage check here
+  //@#@
+  return true;
+}
+//----------------------------------------------------------------------------------------------------
 bool wallet2::get_pos_entries(currency::COMMAND_RPC_SCAN_POS::request& req)
 {
   for (size_t i = 0; i != m_transfers.size(); i++)
@@ -723,9 +734,8 @@ bool wallet2::get_pos_entries(currency::COMMAND_RPC_SCAN_POS::request& req)
     auto& tr = m_transfers[i];
     if (tr.m_spent)
       continue;
-    //TODO: implement coin_age policy in wallets
-    //if (!is_coin_age_okay(tr.m_block_timestamp, m_last_bc_timestamp))
-    //  continue;
+    if (!is_coin_age_okay(tr))
+      continue;
     currency::pos_entry pe = AUTO_VAL_INIT(pe);
     pe.amount = tr.amount();
     pe.index = tr.m_global_output_index;
