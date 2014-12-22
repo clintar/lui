@@ -2129,7 +2129,10 @@ bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type
 
   stake_kernel sk = AUTO_VAL_INIT(sk);
   uint64_t coindays_weight = 0;
-  bool r = build_kernel(b, sk, coindays_weight);
+
+  stake_modifier_type sm = AUTO_VAL_INIT(sm);
+  build_stake_modifier(sm);
+  bool r = build_kernel(b, sk, coindays_weight, sm);
   CHECK_AND_ASSERT_MES(r, false, "failed to build kernel_stake");
   proof_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
   final_diff = basic_diff / coindays_weight;
