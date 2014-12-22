@@ -603,6 +603,12 @@ bool blockchain_storage::prevalidate_miner_transaction(const block& b, uint64_t 
   if (pos)
   {
     CHECK_AND_ASSERT_MES(b.miner_tx.vin[1].type() == typeid(txin_to_key), false, "coinstake transaction in the block has the wrong type");
+    const txin_to_key& in_to_key = boost::get<txin_to_key>(b.miner_tx.vin[1]);
+    if (have_tx_keyimg_as_spent(in_to_key.k_image))
+    {
+      LOG_PRINT_L1("Key image in coinstake already spent in blockchain: " << string_tools::pod_to_hex(in_to_key.k_image));
+      return false;
+    }
   }
 
   CHECK_AND_ASSERT_MES(b.miner_tx.unlock_time == height + CURRENCY_MINED_MONEY_UNLOCK_WINDOW,
@@ -2523,7 +2529,7 @@ bool blockchain_storage::add_new_block(const block& bl_, block_verification_cont
   return handle_block_to_main_chain(bl, id, bvc);
 }
 //------------------------------------------------------------------
-bool blockchain_storage::build_kernel(const block& bl, stake_kernel& kernel, uint64_t& coindays_weight)
+bool blockchain_storage::build_kernel(const block& bl, stake_kernel& kernel, uint64_t& coindays_weight, const stake_modifier_type& stake_modifier)
 {
   CHECK_AND_ASSERT_MES(bl.miner_tx.vin.size() == 2, false, "wrong miner transaction");
   CHECK_AND_ASSERT_MES(bl.miner_tx.vin[0].type() == typeid(txin_gen), false, "wrong miner transaction");
@@ -2532,7 +2538,7 @@ bool blockchain_storage::build_kernel(const block& bl, stake_kernel& kernel, uin
   const txin_to_key& txin = boost::get<txin_to_key>(bl.miner_tx.vin[1]);
   CHECK_AND_ASSERT_MES(txin.key_offsets.size(), false, "wrong miner transaction");
   kernel.tx_block_timestamp = bl.timestamp;
-  return build_kernel(txin.amount, txin.key_offsets[0], txin.k_image, kernel, coindays_weight);
+  return build_kernel(txin.amount, txin.key_offsets[0], txin.k_image, kernel, coindays_weight, stake_modifier);
 }
 //------------------------------------------------------------------
 bool blockchain_storage::build_stake_modifier(crypto::hash& sm)
@@ -2556,13 +2562,14 @@ bool blockchain_storage::build_stake_modifier(crypto::hash& sm)
   return true;
 }
 //------------------------------------------------------------------
-bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coindays_weight)
+bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coindays_weight, const stake_modifier_type& stake_modifier)
 {
   coindays_weight = 0;
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   kernel = stake_kernel();
   kernel.tx_out_global_index = global_index;
   kernel.kimage = ki;
+  kernel.stake_modifier = stake_modifier;
 
   //get block related with coinstake source transaction
   auto it = m_outputs.find(amount);
@@ -2578,7 +2585,6 @@ bool blockchain_storage::build_kernel(uint64_t amount, uint64_t global_index, co
   kernel.tx_block_timestamp = m_blocks[tx_it->second.m_keeper_block_height].bl.timestamp;
 
   coindays_weight = get_coinday_weight(amount, coin_age);
-  build_stake_modifier(kernel.stake_modifier);
   return true;
 }
 //------------------------------------------------------------------
@@ -2591,13 +2597,16 @@ bool blockchain_storage::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMA
   basic_diff = get_next_diff_conditional(true);
   CRITICAL_REGION_END();
 
+  stake_modifier_type sm = AUTO_VAL_INIT(sm);
+  build_stake_modifier(sm);
+
   for (size_t i = 0; i != sp.pos_entries.size(); i++)
   {
     for (uint64_t ts = timstamp_start; ts < timstamp_start + POS_SCAN_WINDOW; ts++)
     {
       stake_kernel sk = AUTO_VAL_INIT(sk);
       uint64_t coindays_weight = 0;
-      build_kernel(sp.pos_entries[i].amount, sp.pos_entries[i].index, sp.pos_entries[i].keyimage, sk, coindays_weight);
+      build_kernel(sp.pos_entries[i].amount, sp.pos_entries[i].index, sp.pos_entries[i].keyimage, sk, coindays_weight, sm);
       crypto::hash kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
       wide_difficulty_type this_coin_diff = basic_diff / coindays_weight;
       if (!check_hash(kernel_hash, this_coin_diff))

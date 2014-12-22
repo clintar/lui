@@ -133,8 +133,8 @@ namespace currency
     bool get_transactions_daily_stat(uint64_t& daily_cnt, uint64_t& daily_volume);
     bool check_keyimages(const std::list<crypto::key_image>& images, std::list<bool>& images_stat);//true - unspent, false - spent
     // --- PoS ---    
-    bool build_kernel(const block& bl, stake_kernel& kernel, uint64_t& coindays_weight);
-    bool build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coindays_weight);
+    bool build_kernel(const block& bl, stake_kernel& kernel, uint64_t& coindays_weight, const stake_modifier_type& stake_modifier);
+    bool build_kernel(uint64_t amount, uint64_t global_index, const crypto::key_image& ki, stake_kernel& kernel, uint64_t& coindays_weight, const stake_modifier_type& stake_modifier);
     bool build_stake_modifier(crypto::hash& sm);
     bool scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMAND_RPC_SCAN_POS::response& rsp);
     bool validate_pos_block(const block& b, const crypto::hash& id);
