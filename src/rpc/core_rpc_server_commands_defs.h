@@ -675,5 +675,26 @@ namespace currency
       END_KV_SERIALIZE_MAP()
     };
   };
+
+  struct COMMAND_RPC_GET_POS_MINING_DETAILS
+  {
+    struct request
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response
+    {
+      stake_modifier_type sm;
+      uint64_t pos_basic_difficulty;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(sm)
+        KV_SERIALIZE(pos_basic_difficulty)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
 }
 

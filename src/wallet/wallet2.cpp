@@ -741,6 +741,7 @@ bool wallet2::get_pos_entries(currency::COMMAND_RPC_SCAN_POS::request& req)
     pe.index = tr.m_global_output_index;
     pe.keyimage = tr.m_key_image;
     pe.wallet_index = i;
+    pe.block_timestamp = tr.m_block_timestamp;
     req.pos_entries.push_back(pe);
   }
 
@@ -792,7 +793,58 @@ bool wallet2::prepare_and_sign_pos_block(currency::block& b,
   LOG_PRINT_GREEN("Block constructed, sending to core...", LOG_LEVEL_1);
   return true;
 }
+//------------------------------------------------------------------
+bool wallet2::build_kernel(const pos_entry& pe, const stake_modifier_type& stake_modifier, stake_kernel& kernel, uint64_t& coindays_weight)
+{
+  coindays_weight = 0;
+  kernel = stake_kernel();
+  kernel.tx_out_global_index = pe.index;
+  kernel.kimage = pe.keyimage;
+  kernel.stake_modifier = stake_modifier;
+
+  uint64_t coin_age = m_last_bc_timestamp - pe.block_timestamp;
+  kernel.tx_block_timestamp = pe.block_timestamp;
+
+  coindays_weight = get_coinday_weight(pe.amount, coin_age);
+  return true;
+}
 //----------------------------------------------------------------------------------------------------
+bool wallet2::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMAND_RPC_SCAN_POS::response& rsp)
+{
+  uint64_t timstamp_start = 0;
+  wide_difficulty_type basic_diff = 0;
+  timstamp_start = m_last_bc_timestamp;
+  
+  COMMAND_RPC_GET_POS_MINING_DETAILS::request pos_details_req = AUTO_VAL_INIT(pos_details_req);
+  COMMAND_RPC_GET_POS_MINING_DETAILS::response pos_details_resp = AUTO_VAL_INIT(pos_details_resp);
+  m_core_proxy->call_COMMAND_RPC_GET_POS_MINING_DETAILS(pos_details_req, pos_details_resp);
+
+  for (size_t i = 0; i != sp.pos_entries.size(); i++)
+  {
+    for (uint64_t ts = timstamp_start; ts < timstamp_start + POS_SCAN_WINDOW; ts++)
+    {
+      stake_kernel sk = AUTO_VAL_INIT(sk);
+      uint64_t coindays_weight = 0;
+      build_kernel(sp.pos_entries[i], sk, coindays_weight, sm);
+      crypto::hash kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
+      wide_difficulty_type this_coin_diff = basic_diff / coindays_weight;
+      if (!check_hash(kernel_hash, this_coin_diff))
+        continue;
+      else
+      {
+        //found kernel
+        LOG_PRINT_GREEN("Found kernel: amount=" << sp.pos_entries[i].amount << ", index=" << sp.pos_entries[i].index << ", key_image" << sp.pos_entries[i].keyimage, LOG_LEVEL_0);
+        rsp.index = i;
+        rsp.block_timestamp = ts;
+        rsp.status = CORE_RPC_STATUS_OK;
+        return true;
+      }
+    }
+  }
+  rsp.status = CORE_RPC_STATUS_NOT_FOUND;
+  return false;
+}
+//------------------------------------------------------------------
 bool wallet2::try_mint_pos()
 {
   currency::COMMAND_RPC_SCAN_POS::request req = AUTO_VAL_INIT(req);
