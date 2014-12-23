@@ -690,7 +690,7 @@ namespace currency
       uint64_t pos_basic_difficulty;
 
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE_CONTAINER_POD_AS_BLOB(sm)
+        KV_SERIALIZE_VAL_POD_AS_BLOB(sm)
         KV_SERIALIZE(pos_basic_difficulty)
       END_KV_SERIALIZE_MAP()
     };

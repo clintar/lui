@@ -809,14 +809,14 @@ bool wallet2::build_kernel(const pos_entry& pe, const stake_modifier_type& stake
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMAND_RPC_SCAN_POS::response& rsp)
+bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, currency::COMMAND_RPC_SCAN_POS::response& rsp)
 {
   uint64_t timstamp_start = 0;
   wide_difficulty_type basic_diff = 0;
   timstamp_start = m_last_bc_timestamp;
   
-  COMMAND_RPC_GET_POS_MINING_DETAILS::request pos_details_req = AUTO_VAL_INIT(pos_details_req);
-  COMMAND_RPC_GET_POS_MINING_DETAILS::response pos_details_resp = AUTO_VAL_INIT(pos_details_resp);
+  currency::COMMAND_RPC_GET_POS_MINING_DETAILS::request pos_details_req = AUTO_VAL_INIT(pos_details_req);
+  currency::COMMAND_RPC_GET_POS_MINING_DETAILS::response pos_details_resp = AUTO_VAL_INIT(pos_details_resp);
   m_core_proxy->call_COMMAND_RPC_GET_POS_MINING_DETAILS(pos_details_req, pos_details_resp);
 
   for (size_t i = 0; i != sp.pos_entries.size(); i++)
@@ -825,7 +825,7 @@ bool wallet2::scan_pos(const COMMAND_RPC_SCAN_POS::request& sp, COMMAND_RPC_SCAN
     {
       stake_kernel sk = AUTO_VAL_INIT(sk);
       uint64_t coindays_weight = 0;
-      build_kernel(sp.pos_entries[i], sk, coindays_weight, sm);
+      build_kernel(sp.pos_entries[i], pos_details_resp.sm, sk, coindays_weight);
       crypto::hash kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
       wide_difficulty_type this_coin_diff = basic_diff / coindays_weight;
       if (!check_hash(kernel_hash, this_coin_diff))
