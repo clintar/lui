@@ -809,7 +809,7 @@ bool wallet2::build_kernel(const pos_entry& pe, const stake_modifier_type& stake
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, currency::COMMAND_RPC_SCAN_POS::response& rsp)
+bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, currency::COMMAND_RPC_SCAN_POS::response& rsp, std::atomic<bool>& is_stop)
 {
   uint64_t timstamp_start = 0;
   wide_difficulty_type basic_diff = 0;
@@ -817,12 +817,16 @@ bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, curren
   
   currency::COMMAND_RPC_GET_POS_MINING_DETAILS::request pos_details_req = AUTO_VAL_INIT(pos_details_req);
   currency::COMMAND_RPC_GET_POS_MINING_DETAILS::response pos_details_resp = AUTO_VAL_INIT(pos_details_resp);
+  rsp.status = CORE_RPC_STATUS_NOT_FOUND;
+
   m_core_proxy->call_COMMAND_RPC_GET_POS_MINING_DETAILS(pos_details_req, pos_details_resp);
 
   for (size_t i = 0; i != sp.pos_entries.size(); i++)
   {
     for (uint64_t ts = timstamp_start; ts < timstamp_start + POS_SCAN_WINDOW; ts++)
     {
+      if (!is_stop)
+        return false;
       stake_kernel sk = AUTO_VAL_INIT(sk);
       uint64_t coindays_weight = 0;
       build_kernel(sp.pos_entries[i], pos_details_resp.sm, sk, coindays_weight);
@@ -845,15 +849,9 @@ bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, curren
   return false;
 }
 //------------------------------------------------------------------
-bool wallet2::try_mint_pos()
+bool wallet2::build_minted_block(const currency::COMMAND_RPC_SCAN_POS::request& req, 
+                                 const currency::COMMAND_RPC_SCAN_POS::response& rsp)
 {
-  currency::COMMAND_RPC_SCAN_POS::request req = AUTO_VAL_INIT(req);
-  currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
-  bool r = get_pos_entries(req);
-  CHECK_AND_ASSERT_MES(r, false, "Failed to get_pos_entries()");
-  m_core_proxy->call_COMMAND_RPC_SCAN_POS(req, rsp);
-  if (rsp.status == CORE_RPC_STATUS_OK)
-  {
     //found a block, construct it, sign and push to daemon
     LOG_PRINT_GREEN("Found kernel, constructing block", LOG_LEVEL_1);
 
@@ -905,8 +903,6 @@ bool wallet2::try_mint_pos()
     if (m_callback)
       m_callback->on_pos_block_found(b);
     return true;
-  }
-  return false;
 }
 //----------------------------------------------------------------------------------------------------
 void wallet2::wallet_transfer_info_from_unconfirmed_transfer_details(const unconfirmed_transfer_details& u, wallet_rpc::wallet_transfer_info& wti)

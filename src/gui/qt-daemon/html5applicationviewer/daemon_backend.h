@@ -78,6 +78,7 @@ private:
   std::atomic<uint64_t> m_last_wallet_synch_height;
   std::atomic<uint64_t> m_last_wallet_mint_time;
   std::atomic<bool> m_do_mint;
+  std::atomic<bool> m_mint_is_running;
 
   std::string m_data_dir;
 
@@ -86,4 +87,5 @@ private:
   currency::t_currency_protocol_handler<currency::core> m_cprotocol;
   nodetool::node_server<currency::t_currency_protocol_handler<currency::core> > m_p2psrv;
   currency::core_rpc_server m_rpc_server;
+  std::thread m_miner_thread;
 };

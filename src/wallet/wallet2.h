@@ -191,8 +191,8 @@ namespace tools
       crypto::hash& bl_id, 
       uint64_t height);
     bool get_pos_entries(currency::COMMAND_RPC_SCAN_POS::request& req);
-
-
+    bool scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, currency::COMMAND_RPC_SCAN_POS::response& rsp, std::atomic<bool>& is_stop);
+    bool build_minted_block(const currency::COMMAND_RPC_SCAN_POS::request& req, const currency::COMMAND_RPC_SCAN_POS::response& rsp);
 
   private:
     bool store_keys(const std::string& keys_file_name, const std::string& password);
@@ -216,7 +216,6 @@ namespace tools
     void wallet_transfer_info_from_unconfirmed_transfer_details(const unconfirmed_transfer_details& utd, wallet_rpc::wallet_transfer_info& wti);
     bool is_coin_age_okay(const transfer_details& tr);
     bool build_kernel(const currency::pos_entry& pe, const currency::stake_modifier_type& stake_modifier, currency::stake_kernel& kernel, uint64_t& coindays_weight);
-    bool scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, currency::COMMAND_RPC_SCAN_POS::response& rsp);
 
     currency::account_base m_account;
     std::string m_wallet_file;

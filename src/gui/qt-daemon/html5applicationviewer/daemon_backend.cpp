@@ -16,7 +16,8 @@ daemon_backend::daemon_backend():m_pview(&m_view_stub),
                                  m_rpc_proxy(new tools::core_fast_rpc_proxy(m_rpc_server)),
                                  m_last_daemon_height(0),
                                  m_last_wallet_synch_height(0),
-                                 m_do_mint(true)
+                                 m_do_mint(true), 
+                                 m_mint_is_running(false)
 {
   m_wallet.reset(new tools::wallet2());
   m_wallet->set_core_proxy(std::shared_ptr<tools::i_core_proxy>(new tools::core_fast_rpc_proxy(m_rpc_server)));
@@ -157,6 +158,7 @@ bool daemon_backend::start(int argc, char* argv[], view::i_view* pview_handler)
 bool daemon_backend::send_stop_signal()
 {
   m_stop_singal_sent = true;
+  m_do_mint = false;
   return true;
 }
 
@@ -165,6 +167,9 @@ bool daemon_backend::stop()
   send_stop_signal();
   if(m_main_worker_thread.joinable())
     m_main_worker_thread.join();
+
+  if (m_miner_thread.joinable())
+    m_miner_thread.join();
 
   return true;
 }
@@ -422,16 +427,31 @@ bool daemon_backend::update_wallets()
     }
 
     //check if PoS mining iteration is needed
-    if (m_do_mint && time(nullptr) - m_last_wallet_mint_time > POS_WALLET_MINING_SCAN_INTERVAL)
+    if (!m_mint_is_running && m_do_mint && time(nullptr) - m_last_wallet_mint_time > POS_WALLET_MINING_SCAN_INTERVAL)
     {
-      m_wallet->try_mint_pos();
+      LOG_PRINT_L0("Starting PoS mint iteration");
+      std::shared_ptr<currency::COMMAND_RPC_SCAN_POS::request> req(new currency::COMMAND_RPC_SCAN_POS::request());
+      bool r = m_wallet->get_pos_entries(*req);
+      CHECK_AND_ASSERT_MES(r, false, "Failed to get_pos_entries()");
+      m_mint_is_running = true;
+      m_miner_thread = std::thread([this, req]()
+      {
+        currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
+        m_wallet->scan_pos(*req, rsp, m_do_mint);
+        if (rsp.status == CORE_RPC_STATUS_OK)
+        {
+          CRITICAL_REGION_LOCAL(m_wallet_lock);
+          m_wallet->build_minted_block(*req, rsp);
+        }
+        m_mint_is_running = false;
+      });
       m_last_wallet_mint_time = time(nullptr);
     }
-
-
   }
   return true;
 }
+
+
 
 void daemon_backend::toggle_pos_mining()
 {
@@ -651,6 +671,7 @@ bool daemon_backend::update_wallet_info()
   wi.unlocked_balance = m_wallet->unlocked_balance();
   wi.path = m_wallet->get_wallet_path();
   wi.do_mint = m_do_mint;
+  wi.mint_is_in_progress = m_mint_is_running;
   m_pview->update_wallet_info(wi);
   return true;
 }
