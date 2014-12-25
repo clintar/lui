@@ -324,6 +324,12 @@ function on_update_wallet_info(wal_status)
         $("#wallet_start_stop_mining").text("Stop mining");
     else
         $("#wallet_start_stop_mining").text("Start mining");
+
+    if(wal_status.mint_is_in_progress)
+        $("#mining_is_running_span").text("process");
+    else
+        $("#mining_is_running_span").text("idle");
+
 }
 
 function on_money_transfer(tei)
