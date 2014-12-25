@@ -434,6 +434,9 @@ bool daemon_backend::update_wallets()
       bool r = m_wallet->get_pos_entries(*req);
       CHECK_AND_ASSERT_MES(r, false, "Failed to get_pos_entries()");
       m_mint_is_running = true;
+      if (m_miner_thread.joinable())
+        m_miner_thread.join();
+
       m_miner_thread = std::thread([this, req]()
       {
         currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);

@@ -790,6 +790,12 @@ bool wallet2::prepare_and_sign_pos_block(currency::block& b,
     0,
     &b.miner_tx.signatures[0][0]);
 
+  LOG_PRINT_L4("GENERATED RING SIGNATURE: block_id " << block_hash
+    << "txin.k_image" << txin.k_image
+    << "key_ptr:" << *keys_ptrs[0]
+    << "signature:" << b.miner_tx.signatures[0][0]);
+
+
   LOG_PRINT_GREEN("Block constructed, sending to core...", LOG_LEVEL_1);
   return true;
 }
@@ -820,6 +826,7 @@ bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, curren
   rsp.status = CORE_RPC_STATUS_NOT_FOUND;
 
   m_core_proxy->call_COMMAND_RPC_GET_POS_MINING_DETAILS(pos_details_req, pos_details_resp);
+  basic_diff = pos_details_resp.pos_basic_difficulty;
 
   for (size_t i = 0; i != sp.pos_entries.size(); i++)
   {

@@ -2021,6 +2021,11 @@ bool blockchain_storage::check_tx_input(const txin_to_key& txin, const crypto::h
     return true;
 
   CHECK_AND_ASSERT_MES(sig.size() == output_keys.size(), false, "internal error: tx signatures count=" << sig.size() << " mismatch with outputs keys count for inputs=" << output_keys.size());
+
+  LOG_PRINT_L4("CHECK RING SIGNATURE: tx_prefix_hash " << tx_prefix_hash
+    << "txin.k_image" << txin.k_image
+    << "key_ptr:" << *output_keys[0]
+    << "signature:" << sig[0]);
   return crypto::check_ring_signature(tx_prefix_hash, txin.k_image, output_keys, sig.data());
 }
 //------------------------------------------------------------------
@@ -2137,7 +2142,10 @@ bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type
   proof_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
   final_diff = basic_diff / coindays_weight;
   if (!check_hash(proof_hash, final_diff))
+  {
+    LOG_ERROR("PoS difficulty check failed: basic_diff=" << basic_diff << ", coindays_weight=" << coindays_weight);
     return false;
+  }
 
   //validate signature
   uint64_t max_related_block_height = 0;
@@ -2297,7 +2305,6 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
   }
   else
   {
-
     proof_hash = get_block_longhash(bl, m_blocks.size(), [&](uint64_t index) -> crypto::hash&
     {
       return m_scratchpad[index%m_scratchpad.size()];
