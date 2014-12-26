@@ -131,7 +131,8 @@ Html5ApplicationViewer::Html5ApplicationViewer(QWidget *parent)
 , m_d(new Html5ApplicationViewerPrivate(this)),
 m_quit_requested(false),
 m_deinitialize_done(false),
-m_backend_stopped(false)
+m_backend_stopped(false), 
+m_request_uri_threads_count(0)
 {
   //connect(m_d, SIGNAL(quitRequested()), SLOT(close()));
 
@@ -485,7 +486,7 @@ bool is_uri_allowed(const QString& uri)
 
 QString Html5ApplicationViewer::request_uri(const QString& url_str, const QString& params, const QString& callbackname)
 {
-
+  /*
   ++m_request_uri_threads_count;
   std::thread([url_str, params, callbackname, this](){
 
@@ -508,7 +509,7 @@ QString Html5ApplicationViewer::request_uri(const QString& url_str, const QStrin
     m_d->handle_internal_callback(res, callbackname);
     --m_request_uri_threads_count;
   }).detach();
-
+  */
 
   return "";
 
