@@ -606,7 +606,7 @@ bool blockchain_storage::prevalidate_miner_transaction(const block& b, uint64_t 
     const txin_to_key& in_to_key = boost::get<txin_to_key>(b.miner_tx.vin[1]);
     if (have_tx_keyimg_as_spent(in_to_key.k_image))
     {
-      LOG_PRINT_L1("Key image in coinstake already spent in blockchain: " << string_tools::pod_to_hex(in_to_key.k_image));
+      LOG_PRINT_L0("Key image in coinstake already spent in blockchain: " << string_tools::pod_to_hex(in_to_key.k_image));
       return false;
     }
   }

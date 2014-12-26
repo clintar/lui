@@ -656,36 +656,54 @@ namespace nodetool
 
     size_t try_count = 0;
     size_t rand_count = 0;
-    while(rand_count < (max_random_index+1)*3 &&  try_count < 10 && !m_net_server.is_stop_signal_sent())
+    size_t peer_index = 0;
+    size_t peers_count = use_white_list ? m_peerlist.get_white_peers_count() : m_peerlist.get_gray_peers_count();
+    while (rand_count < (max_random_index + 1) * 3 && try_count < 10 && !m_net_server.is_stop_signal_sent() && peer_index < peers_count)
     {
+
       ++rand_count;
-      size_t random_index = get_random_index_with_fixed_probability(max_random_index);
-      CHECK_AND_ASSERT_MES(random_index < local_peers_count, false, "random_starter_index < peers_local.size() failed!!");
+      if (peers_count > 15)
+        peer_index = get_random_index_with_fixed_probability(max_random_index);
 
-      if(tried_peers.count(random_index))
+      CHECK_AND_ASSERT_MES(peer_index < local_peers_count, false, "random_starter_index < peers_local.size() failed!!");
+
+      if (tried_peers.count(peer_index))
+      {
+        ++peer_index;
         continue;
+      }
 
-      tried_peers.insert(random_index);
+      tried_peers.insert(peer_index);
       peerlist_entry pe = AUTO_VAL_INIT(pe);
-      bool r = use_white_list ? m_peerlist.get_white_peer_by_index(pe, random_index):m_peerlist.get_gray_peer_by_index(pe, random_index);
+      bool r = use_white_list ? m_peerlist.get_white_peer_by_index(pe, peer_index):m_peerlist.get_gray_peer_by_index(pe, peer_index);
       CHECK_AND_ASSERT_MES(r, false, "Failed to get random peer from peerlist(white:" << use_white_list << ")");
 
       ++try_count;
 
-      if(is_peer_used(pe))
+      if (is_peer_used(pe))
+      {
+        ++peer_index;
         continue;
+      }
 
-      if(!is_remote_ip_allowed(pe.adr.ip))
+      if (!is_remote_ip_allowed(pe.adr.ip))
+      {
+        ++peer_index;
         continue;
+      }
 
-      if(is_addr_recently_failed(pe.adr))
+      if (is_addr_recently_failed(pe.adr))
+      {
+        ++peer_index;
         continue;
+      }
 
       LOG_PRINT_L1("Selected peer: " << pe.id << " " << string_tools::get_ip_string_from_int32(pe.adr.ip) << ":" << boost::lexical_cast<std::string>(pe.adr.port) << "[white=" << use_white_list << "] last_seen: " << (pe.last_seen ? misc_utils::get_time_interval_string(time(NULL) - pe.last_seen) : "never"));
       
       if(!try_to_connect_and_handshake_with_new_peer(pe.adr, false, pe.last_seen, use_white_list))
       {
         cache_connect_fail_info(pe.adr);
+        ++peer_index;
         continue;
       }
 
