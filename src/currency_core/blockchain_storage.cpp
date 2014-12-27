@@ -603,12 +603,6 @@ bool blockchain_storage::prevalidate_miner_transaction(const block& b, uint64_t 
   if (pos)
   {
     CHECK_AND_ASSERT_MES(b.miner_tx.vin[1].type() == typeid(txin_to_key), false, "coinstake transaction in the block has the wrong type");
-    const txin_to_key& in_to_key = boost::get<txin_to_key>(b.miner_tx.vin[1]);
-    if (have_tx_keyimg_as_spent(in_to_key.k_image))
-    {
-      LOG_PRINT_L0("Key image in coinstake already spent in blockchain: " << string_tools::pod_to_hex(in_to_key.k_image));
-      return false;
-    }
   }
 
   CHECK_AND_ASSERT_MES(b.miner_tx.unlock_time == height + CURRENCY_MINED_MONEY_UNLOCK_WINDOW,
@@ -1828,7 +1822,7 @@ bool blockchain_storage::add_transaction_from_block(const transaction& tx, const
       if(!r.second)
       {
         //double spend detected
-        LOG_PRINT_L0("tx with id: " << m_tx_id << " in block id: " << m_bl_id << " have input marked as spent with key image: " << ki << ", block declined");
+        LOG_PRINT_RED_L0("tx with id: " << m_tx_id << " in block id: " << m_bl_id << " have input marked as spent with key image: " << ki << ", block declined");
         return false;
       }
 
@@ -1838,7 +1832,7 @@ bool blockchain_storage::add_transaction_from_block(const transaction& tx, const
         if(!m_bcs.update_spent_tx_flags_for_input(in.amount, in.key_offsets[0], true))
         {
           //internal error
-          LOG_PRINT_L0("Failed to  update_spent_tx_flags_for_input");
+          LOG_PRINT_RED_L0("Failed to  update_spent_tx_flags_for_input");
           return false;
         }
       }
@@ -2132,6 +2126,16 @@ bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type
   bool is_pos = is_pos_block(b);
   CHECK_AND_ASSERT_MES(is_pos, false, "is_pos_block() returned false validate_pos_block()");
 
+  //check keyimage
+  CHECK_AND_ASSERT_MES(b.miner_tx.vin[1].type() == typeid(txin_to_key), false, "coinstake transaction in the block has the wrong type");
+  const txin_to_key& in_to_key = boost::get<txin_to_key>(b.miner_tx.vin[1]);
+  if (have_tx_keyimg_as_spent(in_to_key.k_image))
+  {
+      LOG_PRINT_L0("Key image in coinstake already spent in blockchain: " << string_tools::pod_to_hex(in_to_key.k_image));
+      return false;
+  }
+
+  //check kernel
   stake_kernel sk = AUTO_VAL_INIT(sk);
   uint64_t coindays_weight = 0;
 
