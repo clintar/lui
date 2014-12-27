@@ -175,6 +175,7 @@ namespace tools
     static uint64_t select_indices_for_transfer(std::list<size_t>& ind, std::map<uint64_t, std::list<size_t> >& found_free_amounts, uint64_t needed_money);
 
     //PoS
+    //synchronous version of function 
     bool try_mint_pos();
     //for unit tests
     friend class test_generator;

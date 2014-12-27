@@ -1042,10 +1042,10 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
 
 #ifdef _DEBUG
     auto i_dres = m_alternative_chains.find(id);
-    CHECK_AND_ASSERT_MES(i_dres == m_alternative_chains.end(), false, "insertion of new alternative block returned as it already exist");
+    CHECK_AND_ASSERT_MES(i_dres == m_alternative_chains.end(), false, "insertion of new alternative block " << id << " returned as it already exist");
 #endif
     auto i_res = m_alternative_chains.insert(blocks_ext_by_hash::value_type(id, bei));
-    CHECK_AND_ASSERT_MES(i_res.second, false, "insertion of new alternative block returned as it already exist");
+    CHECK_AND_ASSERT_MES(i_res.second, false, "insertion of new alternative block " << id << " returned as it already exist");
     alt_chain.push_back(i_res.first);
     //check if difficulty bigger then in main chain
 
