@@ -856,6 +856,23 @@ bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, curren
   return false;
 }
 //------------------------------------------------------------------
+bool wallet2::try_mint_pos()
+{
+  LOG_PRINT_L0("Starting PoS mint iteration");
+  currency::COMMAND_RPC_SCAN_POS::request req;
+  bool r = get_pos_entries(req);
+  CHECK_AND_ASSERT_MES(r, false, "Failed to get_pos_entries()");
+
+  currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
+  std::atomic<bool> stopper;
+  scan_pos(req, rsp, stopper);
+  if (rsp.status == CORE_RPC_STATUS_OK)
+  {
+      build_minted_block(req, rsp);
+  }
+  return true;
+}
+//-------------------------------
 bool wallet2::build_minted_block(const currency::COMMAND_RPC_SCAN_POS::request& req, 
                                  const currency::COMMAND_RPC_SCAN_POS::response& rsp)
 {
