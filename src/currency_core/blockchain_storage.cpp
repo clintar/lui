@@ -951,7 +951,7 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
     if (pos_block)
     {
       //POS
-      bool res = validate_pos_block(bei.bl, current_diff, id);
+      bool res = validate_pos_block(bei.bl, current_diff, id, true);
       CHECK_AND_ASSERT_MES(res, false, "Failed to validate_pos_block on alternative block, height = " 
                                         << bei.height 
                                         << ", block id: " << get_block_hash(bei.bl));
@@ -2106,22 +2106,22 @@ bool check_pos_block(const block& b)
   return false;
 }
 //------------------------------------------------------------------
-bool blockchain_storage::validate_pos_block(const block& b, const crypto::hash& id)
+bool blockchain_storage::validate_pos_block(const block& b, const crypto::hash& id, bool for_altchain)
 {
   //validate 
   wide_difficulty_type basic_diff = get_next_diff_conditional(true);
-  return validate_pos_block(b, basic_diff, id);
+  return validate_pos_block(b, basic_diff, id, for_altchain);
 }
 //------------------------------------------------------------------
-bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type basic_diff, const crypto::hash& id)
+bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type basic_diff, const crypto::hash& id, bool for_altchain)
 {
   uint64_t coin_age = 0;
   wide_difficulty_type final_diff = 0;
   crypto::hash proof_hash = null_hash;
-  return validate_pos_block(b, basic_diff, coin_age, final_diff, proof_hash, id);
+  return validate_pos_block(b, basic_diff, coin_age, final_diff, proof_hash, id, for_altchain);
 }
 //------------------------------------------------------------------
-bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type basic_diff, uint64_t& coin_age, wide_difficulty_type& final_diff, crypto::hash& proof_hash, const crypto::hash& id)
+bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type basic_diff, uint64_t& coin_age, wide_difficulty_type& final_diff, crypto::hash& proof_hash, const crypto::hash& id, bool for_altchain)
 {
   bool is_pos = is_pos_block(b);
   CHECK_AND_ASSERT_MES(is_pos, false, "is_pos_block() returned false validate_pos_block()");
@@ -2129,7 +2129,7 @@ bool blockchain_storage::validate_pos_block(const block& b, wide_difficulty_type
   //check keyimage
   CHECK_AND_ASSERT_MES(b.miner_tx.vin[1].type() == typeid(txin_to_key), false, "coinstake transaction in the block has the wrong type");
   const txin_to_key& in_to_key = boost::get<txin_to_key>(b.miner_tx.vin[1]);
-  if (have_tx_keyimg_as_spent(in_to_key.k_image))
+  if (!for_altchain && have_tx_keyimg_as_spent(in_to_key.k_image))
   {
       LOG_PRINT_L0("Key image in coinstake already spent in blockchain: " << string_tools::pod_to_hex(in_to_key.k_image));
       return false;
@@ -2304,7 +2304,7 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
   TIME_MEASURE_START(longhash_calculating_time);
   if (is_pos_bl)
   {
-    bool r = validate_pos_block(bl, current_diffic, coin_age, this_coin_diff, proof_hash, id);
+    bool r = validate_pos_block(bl, current_diffic, coin_age, this_coin_diff, proof_hash, id, false);
     CHECK_AND_ASSERT_MES(r, false, "validate_pos_block failed!!");
   }
   else
