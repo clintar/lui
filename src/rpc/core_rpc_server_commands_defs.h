@@ -14,10 +14,11 @@
 namespace currency
 {
   //-----------------------------------------------
-#define CORE_RPC_STATUS_OK          "OK"
-#define CORE_RPC_STATUS_BUSY        "BUSY"
-#define CORE_RPC_STATUS_NOT_FOUND   "NOT FOUND"
-#define CORE_RPC_STATUS_FAILED      "FAILED"
+#define CORE_RPC_STATUS_OK            "OK"
+#define CORE_RPC_STATUS_BUSY          "BUSY"
+#define CORE_RPC_STATUS_NOT_FOUND     "NOT FOUND"
+#define CORE_RPC_STATUS_FAILED        "FAILED"
+#define CORE_RPC_STATUS_DISCONNECTED  "DISCONNECTED"
 
 
   struct alias_rpc_details_base
@@ -677,7 +678,7 @@ namespace currency
   };
 
   struct COMMAND_RPC_GET_POS_MINING_DETAILS
-  {
+  {    
     struct request
     {
       BEGIN_KV_SERIALIZE_MAP()
@@ -688,10 +689,12 @@ namespace currency
     {
       stake_modifier_type sm;
       uint64_t pos_basic_difficulty;
+      std::string status;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE_VAL_POD_AS_BLOB(sm)
         KV_SERIALIZE(pos_basic_difficulty)
+        KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
   };

@@ -826,6 +826,13 @@ bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, curren
   rsp.status = CORE_RPC_STATUS_NOT_FOUND;
 
   m_core_proxy->call_COMMAND_RPC_GET_POS_MINING_DETAILS(pos_details_req, pos_details_resp);
+  if (pos_details_resp.status != CORE_RPC_STATUS_OK)
+  {
+    rsp.status = pos_details_resp.status;
+    return false;
+  }
+
+
   basic_diff = pos_details_resp.pos_basic_difficulty;
 
   for (size_t i = 0; i != sp.pos_entries.size(); i++)
