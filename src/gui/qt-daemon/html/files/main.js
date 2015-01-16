@@ -146,6 +146,24 @@ function on_update_daemon_state(info_obj)
     else
         $("#last_actual_version_text").text("(Critical update: " + info_obj.last_build_available + ")");
     update_last_ver_view(info_obj.last_build_displaymode);
+
+    fill_last_blocks(info_obj);
+    fill_block_explorer(info_obj);
+
+}
+
+
+function fill_block_explorer(info_obj) {
+    if (info_obj.last_blocks === undefined)
+        return;
+    $("#block_explorer_entry_parent").clear();
+
+    var text = "";
+    for (var i = 0; i != info_obj.last_blocks.length; i++)
+    {
+        text = text + '<span>[' + info_obj.last_blocks[i].date +' ]</span><span style="font-weight: bold"> ' + info_obj.last_blocks[i].h.toString() + '</span> <span style="color: #0d8233; width: 200px"> '
+            + info_obj.last_blocks[i].type + '</span> diff: ' + info_obj.last_blocks[i].diff + '<br>';
+    }
 }
 
 function on_update_wallet_status(wal_status)
