@@ -60,6 +60,8 @@ private:
   bool update_wallet_info();
   bool load_recent_transfers();
   bool get_transfer_address(const std::string& adr_str, currency::account_public_address& addr);
+  bool get_last_blocks(view::daemon_status_info& dsi);
+
 
   //----- tools::i_wallet2_callback ------
   virtual void on_new_block(uint64_t height, const currency::block& block);

@@ -356,11 +356,21 @@ bool daemon_backend::update_state_info()
       dsi.last_build_displaymode = view::ui_last_build_displaymode::ui_lb_dm_actual;
     }
   }
-
+  
+  get_last_blocks(dsi);
 
   m_last_daemon_height = dsi.height = inf.height;
   m_pview->update_daemon_status(dsi);
   return true;
+}
+
+bool daemon_backend::get_last_blocks(view::daemon_status_info& dsi)
+{
+  dsi.last_blocks
+
+  m_rpc_proxy->call_COMMAND_RPC_GET_BLOCKS_FAST()
+
+
 }
 
 bool daemon_backend::update_wallets()

@@ -699,5 +699,30 @@ namespace currency
     };
   };
 
+  struct COMMAND_RPC_GET_BLOCKS_DETAILS
+  {
+    struct request
+    {
+      uint64_t height_start;
+      uint64_t count;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(height_start)
+        KV_SERIALIZE(count)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response
+    {
+      std::string status;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_VAL_POD_AS_BLOB(sm)
+        KV_SERIALIZE(pos_basic_difficulty)
+        KV_SERIALIZE(status)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
 }
 

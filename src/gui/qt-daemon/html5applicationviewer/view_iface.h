@@ -77,6 +77,23 @@ namespace view
 
 
 
+
+  struct block_info
+  {
+    std::string date;
+    uint64_t    h;
+    std::string type;
+    std::string diff;
+
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(date)
+      KV_SERIALIZE(h)
+      KV_SERIALIZE(type)
+      KV_SERIALIZE(diff)
+    END_KV_SERIALIZE_MAP()
+  };
+
+
   struct switch_view_info
   {
     enum ui_views
@@ -108,6 +125,7 @@ public:
     uint64_t hashrate;
     uint64_t last_build_displaymode;
     std::string last_build_available;
+    std::list<block_info> last_blocks;
 
     BEGIN_KV_SERIALIZE_MAP()
       KV_SERIALIZE(text_state)
@@ -122,6 +140,7 @@ public:
       KV_SERIALIZE(hashrate)
       KV_SERIALIZE(last_build_displaymode)
       KV_SERIALIZE(last_build_available)
+      KV_SERIALIZE(last_blocks)
     END_KV_SERIALIZE_MAP()
   };
 

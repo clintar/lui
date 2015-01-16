@@ -815,7 +815,7 @@ bool wallet2::build_kernel(const pos_entry& pe, const stake_modifier_type& stake
   return true;
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, currency::COMMAND_RPC_SCAN_POS::response& rsp, std::atomic<bool>& is_stop)
+bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, currency::COMMAND_RPC_SCAN_POS::response& rsp, std::atomic<bool>& keep_mining)
 {
   uint64_t timstamp_start = 0;
   wide_difficulty_type basic_diff = 0;
@@ -839,7 +839,7 @@ bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, curren
   {
     for (uint64_t ts = timstamp_start; ts < timstamp_start + POS_SCAN_WINDOW; ts++)
     {
-      if (!is_stop)
+      if (!keep_mining)
         return false;
       stake_kernel sk = AUTO_VAL_INIT(sk);
       uint64_t coindays_weight = 0;
@@ -871,12 +871,17 @@ bool wallet2::try_mint_pos()
   CHECK_AND_ASSERT_MES(r, false, "Failed to get_pos_entries()");
 
   currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
-  std::atomic<bool> stopper;
-  scan_pos(req, rsp, stopper);
+  std::atomic<bool> keep_going(true);
+  scan_pos(req, rsp, keep_going);
   if (rsp.status == CORE_RPC_STATUS_OK)
   {
       build_minted_block(req, rsp);
   }
+  else 
+  {
+    LOG_PRINT_L0("PoS mint iteration finished(" << rsp.status  << ")");
+  }
+
   return true;
 }
 //-------------------------------
