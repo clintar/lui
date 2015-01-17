@@ -699,6 +699,20 @@ namespace currency
     };
   };
 
+
+  struct block_rpc_extended_info
+  {
+    blobdata b;
+    uint64_t h;
+    std::string diff;
+
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(b)
+      KV_SERIALIZE(h)
+      KV_SERIALIZE(diff)
+    END_KV_SERIALIZE_MAP()
+  };
+
   struct COMMAND_RPC_GET_BLOCKS_DETAILS
   {
     struct request
@@ -715,11 +729,11 @@ namespace currency
     struct response
     {
       std::string status;
+      std::list<block_rpc_extended_info> blocks;
 
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE_VAL_POD_AS_BLOB(sm)
-        KV_SERIALIZE(pos_basic_difficulty)
         KV_SERIALIZE(status)
+        KV_SERIALIZE(blocks)
       END_KV_SERIALIZE_MAP()
     };
   };

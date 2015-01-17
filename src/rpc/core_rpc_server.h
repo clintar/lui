@@ -42,6 +42,8 @@ namespace currency
     bool on_get_tx_pool(const COMMAND_RPC_GET_TX_POOL::request& req, COMMAND_RPC_GET_TX_POOL::response& res, connection_context& cntx);
     bool on_check_keyimages(const COMMAND_RPC_CHECK_KEYIMAGES::request& req, COMMAND_RPC_CHECK_KEYIMAGES::response& res, connection_context& cntx);
     bool on_scan_pos(const COMMAND_RPC_SCAN_POS::request& req, COMMAND_RPC_SCAN_POS::response& res, connection_context& cntx);
+    bool on_rpc_get_blocks_details(const COMMAND_RPC_GET_BLOCKS_DETAILS::request& req, COMMAND_RPC_GET_BLOCKS_DETAILS::response& res, connection_context& cntx);
+    
 
     //json_rpc
     bool on_getblockcount(const COMMAND_RPC_GETBLOCKCOUNT::request& req, COMMAND_RPC_GETBLOCKCOUNT::response& res, connection_context& cntx);
@@ -88,7 +90,7 @@ namespace currency
       MAP_URI_AUTO_JON2("/stop_mining", on_stop_mining, COMMAND_RPC_STOP_MINING)
       MAP_URI_AUTO_JON2("/getinfo", on_get_info, COMMAND_RPC_GET_INFO)
       MAP_URI_AUTO_BIN2("/get_pos_details.bin", on_get_pos_mining_details, COMMAND_RPC_GET_POS_MINING_DETAILS)
-      //MAP_URI_AUTO_BIN2("/get_blocks_details.bin", on_get_blocks_details, COMMAND_RPC_GET_POS_MINING_DETAILS)
+      MAP_URI_AUTO_BIN2("/get_blocks_details.bin", on_rpc_get_blocks_details, COMMAND_RPC_GET_BLOCKS_DETAILS)
       MAP_URI2("/getfullscratchpad2", on_getfullscratchpad2)
       BEGIN_JSON_RPC_MAP("/json_rpc")
         MAP_JON_RPC("getblockcount",             on_getblockcount,              COMMAND_RPC_GETBLOCKCOUNT)

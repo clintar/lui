@@ -71,6 +71,11 @@ namespace tools
     return epee::net_utils::invoke_http_bin_remote_command2(m_daemon_address + "/get_pos_details.bin", req, rsp, m_http_client, WALLET_RCP_CONNECTION_TIMEOUT);
   }
   //------------------------------------------------------------------------------------------------------------------------------
+  bool default_http_core_proxy::call_COMMAND_RPC_GET_BLOCKS_DETAILS(const currency::COMMAND_RPC_GET_BLOCKS_DETAILS::request& req, currency::COMMAND_RPC_GET_BLOCKS_DETAILS::response& res)
+  {
+    return epee::net_utils::invoke_http_bin_remote_command2(m_daemon_address + "/get_blocks_details.bin", req, res, m_http_client, WALLET_RCP_CONNECTION_TIMEOUT);
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
   bool default_http_core_proxy::call_COMMAND_RPC_GETBLOCKTEMPLATE(const currency::COMMAND_RPC_GETBLOCKTEMPLATE::request& req, currency::COMMAND_RPC_GETBLOCKTEMPLATE::response& rsp)
   {
     return epee::net_utils::invoke_http_json_rpc("/json_rpc", "getblocktemplate", req, rsp, m_http_client);

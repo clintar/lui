@@ -1094,6 +1094,22 @@ bool blockchain_storage::get_blocks(uint64_t start_offset, size_t count, std::li
   return true;
 }
 //------------------------------------------------------------------
+bool blockchain_storage::get_blocks(uint64_t start_offset, size_t count, std::list<block_rpc_extended_info>& blocks)
+{
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+  if (start_offset >= m_blocks.size())
+    return false;
+  for (size_t i = start_offset; i < start_offset + count && i < m_blocks.size(); i++)
+  {
+    blocks.push_back(block_rpc_extended_info());
+    block_rpc_extended_info& bei = blocks.back();
+    bei.b = currency::block_to_blob(m_blocks[i].bl);
+    bei.diff = m_blocks[i].difficulty.convert_to<std::string>();
+    bei.h = i;
+  }
+  return true;
+}
+//------------------------------------------------------------------
 bool blockchain_storage::get_blocks(uint64_t start_offset, size_t count, std::list<block>& blocks)
 {
   CRITICAL_REGION_LOCAL(m_blockchain_lock);

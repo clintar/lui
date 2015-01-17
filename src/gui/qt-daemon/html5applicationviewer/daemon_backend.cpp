@@ -366,11 +366,24 @@ bool daemon_backend::update_state_info()
 
 bool daemon_backend::get_last_blocks(view::daemon_status_info& dsi)
 {
-  dsi.last_blocks
+  //dsi.last_blocks
+  currency::COMMAND_RPC_GET_BLOCKS_DETAILS::request req = AUTO_VAL_INIT(req);
+  req.height_start = m_wallet->get_blockchain_current_height() >= GUI_BLOCKS_DISPLAY_COUNT ? 0 : m_wallet->get_blockchain_current_height() - GUI_BLOCKS_DISPLAY_COUNT;
+  currency::COMMAND_RPC_GET_BLOCKS_DETAILS::response rsp = AUTO_VAL_INIT(rsp);
+  m_rpc_proxy->call_COMMAND_RPC_GET_BLOCKS_DETAILS(req, rsp);
 
-  m_rpc_proxy->call_COMMAND_RPC_GET_BLOCKS_FAST()
-
-
+  for (auto it = rsp.blocks.begin(); it != rsp.blocks.end(); it++)
+  {
+    dsi.last_blocks.push_back(view::block_info());
+    view::block_info& bi = dsi.last_blocks.back();
+    currency::block b = AUTO_VAL_INIT(b);
+    bool r = currency::parse_and_validate_block_from_blob(it->b, b);
+    CHECK_AND_ASSERT_MES(r, false, "Failed to parse_and_validate_block_from_blob");
+    bi.date = b.timestamp;
+    bi.diff = it->diff;
+    bi.h = it->h;
+  }
+  return true;
 }
 
 bool daemon_backend::update_wallets()

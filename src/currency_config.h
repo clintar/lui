@@ -110,6 +110,8 @@
 #define POS_WALLET_MINING_SCAN_INTERVAL                 20  //seconds
 
 
+#define GUI_BLOCKS_DISPLAY_COUNT                        40
+
 #define ALLOW_DEBUG_COMMANDS
 
 #define CURRENCY_NAME_BASE                              "Lui"

@@ -80,7 +80,7 @@ namespace view
 
   struct block_info
   {
-    std::string date;
+    uint64_t date;
     uint64_t    h;
     std::string type;
     std::string diff;
