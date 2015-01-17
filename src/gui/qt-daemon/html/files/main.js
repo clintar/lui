@@ -161,7 +161,8 @@ function fill_block_explorer(info_obj) {
     var text = "";
     for (var i = 0; i != info_obj.last_blocks.length; i++)
     {
-        text = text + '<span>[' + info_obj.last_blocks[i].date +' ]</span><span style="font-weight: bold"> ' + info_obj.last_blocks[i].h.toString() + '</span> <span style="color: #0d8233; width: 200px"> '
+        var dt = new Date(info_obj.last_blocks[i].date*1000);
+        text = text + '<span>[' + dt.format("yyyy-mm-dd HH:MM") +' ]</span><span style="font-weight: bold"> ' + info_obj.last_blocks[i].h.toString() + '</span> <span style="color: #0d8233; width: 200px"> '
             + info_obj.last_blocks[i].type + '</span> diff: ' + info_obj.last_blocks[i].diff + '<br>';
     }
 }
