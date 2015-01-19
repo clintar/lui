@@ -368,11 +368,12 @@ bool daemon_backend::get_last_blocks(view::daemon_status_info& dsi)
 {
   //dsi.last_blocks
   currency::COMMAND_RPC_GET_BLOCKS_DETAILS::request req = AUTO_VAL_INIT(req);
-  req.height_start = m_wallet->get_blockchain_current_height() >= GUI_BLOCKS_DISPLAY_COUNT ? 0 : m_wallet->get_blockchain_current_height() - GUI_BLOCKS_DISPLAY_COUNT;
+  req.height_start = m_last_daemon_height >= GUI_BLOCKS_DISPLAY_COUNT ? m_last_daemon_height - GUI_BLOCKS_DISPLAY_COUNT : 0;
+  req.count = GUI_BLOCKS_DISPLAY_COUNT;
   currency::COMMAND_RPC_GET_BLOCKS_DETAILS::response rsp = AUTO_VAL_INIT(rsp);
   m_rpc_proxy->call_COMMAND_RPC_GET_BLOCKS_DETAILS(req, rsp);
 
-  for (auto it = rsp.blocks.begin(); it != rsp.blocks.end(); it++)
+  for (auto it = rsp.blocks.rbegin(); it != rsp.blocks.rend(); it++)
   {
     dsi.last_blocks.push_back(view::block_info());
     view::block_info& bi = dsi.last_blocks.back();
@@ -382,6 +383,10 @@ bool daemon_backend::get_last_blocks(view::daemon_status_info& dsi)
     bi.date = b.timestamp;
     bi.diff = it->diff;
     bi.h = it->h;
+    if (is_pos_block(b))
+      bi.type = "PoS";
+    else
+      bi.type = "PoW";
   }
   return true;
 }

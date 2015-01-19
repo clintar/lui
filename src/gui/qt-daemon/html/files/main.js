@@ -147,7 +147,6 @@ function on_update_daemon_state(info_obj)
         $("#last_actual_version_text").text("(Critical update: " + info_obj.last_build_available + ")");
     update_last_ver_view(info_obj.last_build_displaymode);
 
-    fill_last_blocks(info_obj);
     fill_block_explorer(info_obj);
 
 }
@@ -156,15 +155,22 @@ function on_update_daemon_state(info_obj)
 function fill_block_explorer(info_obj) {
     if (info_obj.last_blocks === undefined)
         return;
-    $("#block_explorer_entry_parent").clear();
+    $("#block_explorer_entry_parent").empty();
 
     var text = "";
     for (var i = 0; i != info_obj.last_blocks.length; i++)
     {
+        var type_style_text = 'style="color: #af4f3a; width: 200px"';
+        if (info_obj.last_blocks[i].type == 'PoS')
+            type_style_text = 'style="color: #0d8233; width: 200px"';
+
         var dt = new Date(info_obj.last_blocks[i].date*1000);
-        text = text + '<span>[' + dt.format("yyyy-mm-dd HH:MM") +' ]</span><span style="font-weight: bold"> ' + info_obj.last_blocks[i].h.toString() + '</span> <span style="color: #0d8233; width: 200px"> '
+        text = text + '<span>[' + dt.format("yyyy-mm-dd HH:MM") + ' ]</span><span style = "font-weight: bold"> '
+            + info_obj.last_blocks[i].h.toString() + '</span> <span ' + type_style_text + '> '
             + info_obj.last_blocks[i].type + '</span> diff: ' + info_obj.last_blocks[i].diff + '<br>';
     }
+
+    $("#block_explorer_entry_parent").html(text);
 }
 
 function on_update_wallet_status(wal_status)

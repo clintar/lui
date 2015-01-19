@@ -546,18 +546,19 @@ wide_difficulty_type blockchain_storage::get_next_diff_conditional(bool pos)
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   std::vector<uint64_t> timestamps;
   std::vector<wide_difficulty_type> commulative_difficulties;
-  //size_t count = 0;
+  size_t count = 0;
   if (!m_blocks.size())
     return DIFFICULTY_STARTER;
   //skip genesis timestamp
   auto stop_it = --m_blocks.rend();
-  for (auto rit = m_blocks.rbegin(); rit != stop_it; rit++)
+  for (auto rit = m_blocks.rbegin(); rit != stop_it && count < DIFFICULTY_WINDOW; rit++)
   {
     bool is_pos_bl = is_pos_block(rit->bl);
     if ((pos && !is_pos_bl) || (!pos && is_pos_bl))
       continue;
     timestamps.push_back(rit->bl.timestamp);
     commulative_difficulties.push_back(rit->cumulative_diff_precise);
+    ++count;
   }
   return next_difficulty(timestamps, commulative_difficulties, pos ? DIFFICULTY_POS_TARGET : DIFFICULTY_POW_TARGET);
 }
