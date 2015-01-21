@@ -1475,7 +1475,7 @@ size_t blockchain_storage::get_current_sequence_factor_for_alt(alt_chain_list& a
   }
 
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
-  for (auto it = m_blocks.rbegin(); it != m_blocks.rend(); ++it)
+  for (auto it = m_blocks.rbegin(); it != m_blocks.rend(); ++it, n++)
   {
     if (pos != is_pos_block(it->bl))
     {

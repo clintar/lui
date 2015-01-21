@@ -460,6 +460,8 @@ bool daemon_backend::update_wallets()
       LOG_PRINT_L0("Starting PoS mint iteration");
       std::shared_ptr<currency::COMMAND_RPC_SCAN_POS::request> req(new currency::COMMAND_RPC_SCAN_POS::request());
       bool r = m_wallet->get_pos_entries(*req);
+      LOG_PRINT_L0("POS entries: " << req->pos_entries.size());
+
       CHECK_AND_ASSERT_MES(r, false, "Failed to get_pos_entries()");
       m_mint_is_running = true;
       if (m_miner_thread.joinable())
@@ -467,6 +469,7 @@ bool daemon_backend::update_wallets()
 
       m_miner_thread = std::thread([this, req]()
       {
+        LOG_PRINT_L0("Starting PoS mint thread...");
         currency::COMMAND_RPC_SCAN_POS::response rsp = AUTO_VAL_INIT(rsp);
         m_wallet->scan_pos(*req, rsp, m_do_mint);
         if (rsp.status == CORE_RPC_STATUS_OK)
@@ -475,6 +478,7 @@ bool daemon_backend::update_wallets()
           m_wallet->build_minted_block(*req, rsp);
         }
         m_mint_is_running = false;
+        LOG_PRINT_L0("PoS mint iteration finished, rsp.status = " << rsp.status);
       });
       m_last_wallet_mint_time = time(nullptr);
     }
@@ -585,6 +589,7 @@ bool daemon_backend::generate_wallet(const std::string& path, const std::string&
 
 bool daemon_backend::close_wallet()
 {
+  m_do_mint = false;
   CRITICAL_REGION_LOCAL(m_wallet_lock);
   try
   {

@@ -802,6 +802,7 @@ bool wallet2::prepare_and_sign_pos_block(currency::block& b,
 //------------------------------------------------------------------
 bool wallet2::build_kernel(const pos_entry& pe, const stake_modifier_type& stake_modifier, stake_kernel& kernel, uint64_t& coindays_weight)
 {
+  PROFILE_FUNC("build_kernel");
   coindays_weight = 0;
   kernel = stake_kernel();
   kernel.tx_out_global_index = pe.index;
@@ -839,14 +840,25 @@ bool wallet2::scan_pos(const currency::COMMAND_RPC_SCAN_POS::request& sp, curren
   {
     for (uint64_t ts = timstamp_start; ts < timstamp_start + POS_SCAN_WINDOW; ts++)
     {
+      PROFILE_FUNC("general_mining_iteration");
       if (!keep_mining)
         return false;
       stake_kernel sk = AUTO_VAL_INIT(sk);
       uint64_t coindays_weight = 0;
       build_kernel(sp.pos_entries[i], pos_details_resp.sm, sk, coindays_weight);
-      crypto::hash kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
+      crypto::hash kernel_hash;
+      {
+        PROFILE_FUNC("calc_hash");
+        kernel_hash = crypto::cn_fast_hash(&sk, sizeof(sk));
+      }
+      
       wide_difficulty_type this_coin_diff = basic_diff / coindays_weight;
-      if (!check_hash(kernel_hash, this_coin_diff))
+      bool check_hash_res;
+      {
+        PROFILE_FUNC("check_hash");
+        check_hash_res = check_hash(kernel_hash, this_coin_diff);
+      }
+      if (!check_hash_res)
         continue;
       else
       {

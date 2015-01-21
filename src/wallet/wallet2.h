@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #pragma once
-
 #include <memory>
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/vector.hpp>

@@ -14,6 +14,8 @@
 #include "crypto/hash.h"
 #include "currency_config.h"
 #include "difficulty.h"
+#include "profile_tools.h"
+
 namespace currency {
 
   using std::size_t;
@@ -74,7 +76,9 @@ namespace currency {
   const boost::multiprecision::uint256_t max128bit(std::numeric_limits<boost::multiprecision::uint128_t>::max());
   const boost::multiprecision::uint512_t max256bit(std::numeric_limits<boost::multiprecision::uint256_t>::max());
   
-  bool check_hash(const crypto::hash &hash, wide_difficulty_type difficulty) {
+  bool check_hash(const crypto::hash &hash, wide_difficulty_type difficulty) 
+  {
+    PROFILE_FUNC("check_hash");
     if (difficulty < max64bit){ // if can convert to small difficulty - do it
       std::uint64_t dl = difficulty.convert_to<std::uint64_t>();
       uint64_t low, high, top, cur;
