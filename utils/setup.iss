@@ -3,16 +3,16 @@
 
 #define MyAppName "Boolberry"
 ;#define MyAppVersion "0.2.0.31"
-#define MyAppPublisher "Boolberry Team"
-#define MyAppURL "http://boolberry.com"
-#define MyAppExeName "qt-boolb.exe"
-;#define BinariesPath "C:\jenkins\workdir\builds\bbr-win-x64-v0.2.0.31(5d85ebf)"
+#define MyAppPublisher "Lui Team"
+#define MyAppURL "http://lui.com"
+#define MyAppExeName "qt-lui.exe"
+;#define BinariesPath "C:\jenkins\workdir\builds\lui-win-x64-v0.2.0.31(5d85ebf)"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{24C4D076-F481-4E53-AC1D-1DF31397E2E2}
+AppId={{24C46096-F481-4E53-AC1D-1DF31397E2E2}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -49,7 +49,7 @@ Root: HKCR; Subkey: "BoolberryWalletDataKyesFile\DefaultIcon"; ValueType: string
 
 
 [Files]
-Source: "{#BinariesPath}\boolbd.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#BinariesPath}\luid.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\d3dcompiler_47.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\Enginio.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\icudt52.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -65,7 +65,7 @@ Source: "{#BinariesPath}\Qt5Concurrent.dll"; DestDir: "{app}"; Flags: ignorevers
 Source: "{#BinariesPath}\Qt5Core.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\Qt5Declarative.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\Qt5Designer.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#BinariesPath}\Qt5DesignerComponentsd.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#BinariesPath}\Qt5DesignerComponents.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\Qt5Gui.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\Qt5Help.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\Qt5Multimedia.dll"; DestDir: "{app}"; Flags: ignoreversion
@@ -95,8 +95,7 @@ Source: "{#BinariesPath}\Qt5Widgets.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\Qt5WinExtras.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\Qt5Xml.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\Qt5XmlPatterns.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#BinariesPath}\qt-boolb.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#BinariesPath}\simpleminer.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#BinariesPath}\qt-lui.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\simplewallet.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinariesPath}\platforms\qminimal.dll"; DestDir: "{app}\platforms"; Flags: ignoreversion
 Source: "{#BinariesPath}\platforms\qoffscreen.dll"; DestDir: "{app}\platforms"; Flags: ignoreversion

@@ -1,10 +1,12 @@
 SET QT_PREFIX_PATH=C:\Qt\Qt5.3.0\5.3\msvc2013_64
 SET INNOSETUP_PATH=C:\Program Files (x86)\Inno Setup 5\ISCC.exe
-SET QT_BINARIES_PATH=C:\home\projects\binaries\qt-daemon
+SET QT_BINARIES_PATH=C:\home\deploy\qt-binaries
+SET BUILDS_PATH=C:\home\deploy\lui
 SET ACHIVE_NAME_PREFIX=bbr-win-x64-
+SET SOURCES_PATH=C:\home\projects\lui
 
 
-cd boolberry
+cd ..
 git pull
 IF %ERRORLEVEL% NEQ 0 (
   goto error
@@ -17,13 +19,13 @@ IF %ERRORLEVEL% NEQ 0 (
 rmdir build /s /q
 mkdir build
 cd build
-cmake -G "Visual Studio 11 Win64" ..
+cmake -G "Visual Studio 12 Win64" ..
 IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
 
 setLocal 
-call "C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\vcvarsall.bat" x86_amd64
+call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" x86_amd64
 
 msbuild version.vcxproj  /p:Configuration=Release /t:Build
 IF %ERRORLEVEL% NEQ 0 (
@@ -53,13 +55,13 @@ set version=%version:~0,-2%
 echo '%version%'
 
 cd src\release
-zip ..\..\..\..\builds\%ACHIVE_NAME_PREFIX%%version%.zip boolbd.exe simplewallet.exe simpleminer.exe
+zip ..\..\..\..\builds\%ACHIVE_NAME_PREFIX%%version%.zip luidd.exe simplewallet.exe simpleminer.exe
 IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
 
 cd ..\..\..
-
+`
 @echo "---------------- BUILDING GUI ---------------------------------"
 @echo "---------------------------------------------------------------"
 
@@ -83,7 +85,7 @@ IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
 
-msbuild src/qt-boolb.vcxproj  /p:Configuration=Release /t:Build
+msbuild src/qt-lui.vcxproj  /p:Configuration=Release /t:Build
 
 IF %ERRORLEVEL% NEQ 0 (
   goto error
@@ -92,16 +94,30 @@ IF %ERRORLEVEL% NEQ 0 (
 endlocal
 
 cd src\release
-zip ..\..\..\..\builds\%ACHIVE_NAME_PREFIX%%version%.zip qt-boolb.exe
+
+
+zip %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip qt-lui.exe
+IF %ERRORLEVEL% NEQ 0 (
+  goto error
+)
+
+zip %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip simplewallet.exe
+IF %ERRORLEVEL% NEQ 0 (
+  goto error
+)
+
+
+zip %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip luid.exe
 
 IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
 
+
 @echo "Add html"
 
 cd ..\..\..\src\gui\qt-daemon\
-zip -r ..\..\..\..\builds\%ACHIVE_NAME_PREFIX%%version%.zip html
+zip -r %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip html
 IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
@@ -110,13 +126,13 @@ IF %ERRORLEVEL% NEQ 0 (
 @echo "Add qt stuff"
 
 cd %QT_BINARIES_PATH%
-zip -r C:\jenkins\workdir\builds\%ACHIVE_NAME_PREFIX%%version%.zip *.*
+zip -r %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip *.*
 IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
 
 
-cd ..\..\..\build
+cd %SOURCES_PATH%\build
 IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
@@ -129,12 +145,13 @@ IF %ERRORLEVEL% NEQ 0 (
 mkdir installer_src
 
 
-unzip C:\jenkins\workdir\builds\%ACHIVE_NAME_PREFIX%%version%.zip -d installer_src
+unzip %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip -d installer_src
 IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
 
-"%INNOSETUP_PATH%" /DMyAppVersion=%version% /DBinariesPath=../build/installer_src /oC:\jenkins\workdir\builds\ /f%ACHIVE_NAME_PREFIX%%version%-installer ..\utils\setup.iss 
+
+"%INNOSETUP_PATH%"  /dBinariesPath=../build/installer_src /DMyAppVersion=%version% /o%BUILDS_PATH%\builds\ /f%ACHIVE_NAME_PREFIX%%version%-installer ..\utils\setup.iss 
 IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
