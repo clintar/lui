@@ -2,11 +2,13 @@ SET QT_PREFIX_PATH=C:\Qt\Qt5.3.0\5.3\msvc2013_64
 SET INNOSETUP_PATH=C:\Program Files (x86)\Inno Setup 5\ISCC.exe
 SET QT_BINARIES_PATH=C:\home\deploy\qt-binaries
 SET BUILDS_PATH=C:\home\deploy\lui
-SET ACHIVE_NAME_PREFIX=bbr-win-x64-
+SET ACHIVE_NAME_PREFIX=lui-win-x64-
 SET SOURCES_PATH=C:\home\projects\lui
 
 
-cd ..
+@echo on
+
+cd %SOURCES_PATH%
 git pull
 IF %ERRORLEVEL% NEQ 0 (
   goto error
@@ -15,6 +17,12 @@ IF %ERRORLEVEL% NEQ 0 (
 
 @echo "---------------- BUILDING CONSOLE APPLICATIONS ----------------"
 @echo "---------------------------------------------------------------"
+
+IF %ERRORLEVEL% NEQ 0 (
+  goto error
+)
+
+
 
 rmdir build /s /q
 mkdir build
@@ -48,6 +56,8 @@ IF %ERRORLEVEL% NEQ 0 (
 )
 endlocal
 
+@echo on
+
  
 set cmd=src\Release\simplewallet.exe --version
 FOR /F "tokens=3" %%a IN ('%cmd%') DO set version=%%a  
@@ -55,10 +65,24 @@ set version=%version:~0,-2%
 echo '%version%'
 
 cd src\release
-zip ..\..\..\..\builds\%ACHIVE_NAME_PREFIX%%version%.zip luidd.exe simplewallet.exe simpleminer.exe
+zip %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip luid.exe simplewallet.exe simpleminer.exe
 IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
+
+
+zip %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip simplewallet.exe
+IF %ERRORLEVEL% NEQ 0 (
+  goto error
+)
+
+
+zip %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip luid.exe
+
+IF %ERRORLEVEL% NEQ 0 (
+  goto error
+)
+
 
 cd ..\..\..
 `
@@ -93,6 +117,7 @@ IF %ERRORLEVEL% NEQ 0 (
 
 endlocal
 
+@echo on
 cd src\release
 
 
@@ -101,22 +126,10 @@ IF %ERRORLEVEL% NEQ 0 (
   goto error
 )
 
-zip %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip simplewallet.exe
-IF %ERRORLEVEL% NEQ 0 (
-  goto error
-)
-
-
-zip %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip luid.exe
-
-IF %ERRORLEVEL% NEQ 0 (
-  goto error
-)
-
 
 @echo "Add html"
 
-cd ..\..\..\src\gui\qt-daemon\
+cd %SOURCES_PATH%\src\gui\qt-daemon\
 zip -r %BUILDS_PATH%\builds\%ACHIVE_NAME_PREFIX%%version%.zip html
 IF %ERRORLEVEL% NEQ 0 (
   goto error
