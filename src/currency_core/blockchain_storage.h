@@ -69,7 +69,7 @@ namespace currency
     //bool push_new_block();
     bool get_blocks(uint64_t start_offset, size_t count, std::list<block>& blocks, std::list<transaction>& txs);
     bool get_blocks(uint64_t start_offset, size_t count, std::list<block>& blocks);
-    bool get_blocks(uint64_t start_offset, size_t count, std::list<block_rpc_extended_info>& blocks);
+    bool get_blocks_ex(uint64_t start_offset, size_t count, std::list<block_rpc_extended_info>& blocks);
     bool get_alternative_blocks(std::list<block>& blocks);
     size_t get_alternative_blocks_count();
     crypto::hash get_block_id_by_height(uint64_t height);

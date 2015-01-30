@@ -1095,7 +1095,7 @@ bool blockchain_storage::get_blocks(uint64_t start_offset, size_t count, std::li
   return true;
 }
 //------------------------------------------------------------------
-bool blockchain_storage::get_blocks(uint64_t start_offset, size_t count, std::list<block_rpc_extended_info>& blocks)
+bool blockchain_storage::get_blocks_ex(uint64_t start_offset, size_t count, std::list<block_rpc_extended_info>& blocks)
 {
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   if (start_offset >= m_blocks.size())

@@ -282,7 +282,7 @@ namespace currency
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_rpc_get_blocks_details(const COMMAND_RPC_GET_BLOCKS_DETAILS::request& req, COMMAND_RPC_GET_BLOCKS_DETAILS::response& res, connection_context& cntx)
   {
-    m_core.get_blockchain_storage().get_blocks(req.height_start, req.count, res.blocks);
+    m_core.get_blockchain_storage().get_blocks_ex(req.height_start, req.count, res.blocks);
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
