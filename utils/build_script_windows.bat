@@ -3,7 +3,7 @@ SET INNOSETUP_PATH=C:\Program Files (x86)\Inno Setup 5\ISCC.exe
 SET QT_BINARIES_PATH=C:\home\deploy\qt-binaries
 SET BUILDS_PATH=C:\home\deploy\lui
 SET ACHIVE_NAME_PREFIX=lui-win-x64-
-SET SOURCES_PATH=C:\home\projects\lui
+SET SOURCES_PATH=C:\home\deploy\lui\src
 
 
 @echo on
