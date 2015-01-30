@@ -1153,4 +1153,17 @@ void wallet2::transfer(const std::vector<currency::tx_destination_entry>& dsts, 
   transfer(dsts, fake_outputs_count, unlock_time, fee, extra, tx);
 }
 //----------------------------------------------------------------------------------------------------
+bool wallet2::is_connected_to_net()
+{
+  currency::COMMAND_RPC_GET_INFO::request req = AUTO_VAL_INIT(req);
+  currency::COMMAND_RPC_GET_INFO::response res = AUTO_VAL_INIT(res);
+  if (!m_core_proxy->call_COMMAND_RPC_GET_INFO(req, res))
+  {
+    LOG_PRINT_L0("Failed to COMMAND_RPC_GET_INFO");
+    return "";
+  }
+  return (res.synchronized_connections_count) ? true : false;
+}
+
+
 }

@@ -55,6 +55,8 @@ namespace currency
     void log_connections();
     uint64_t get_core_inital_height();
     uint64_t get_max_seen_height();
+    size_t get_synchronized_connections_count();
+
   private:
     //----------------- commands handlers ----------------------------------------------
     int handle_notify_new_block(int command, NOTIFY_NEW_BLOCK::request& arg, currency_connection_context& context);
@@ -71,7 +73,6 @@ namespace currency
     //----------------------------------------------------------------------------------
     //bool get_payload_sync_data(HANDSHAKE_DATA::request& hshd, currency_connection_context& context);
     bool request_missing_objects(currency_connection_context& context, bool check_having_blocks);
-    size_t get_synchronizing_connections_count();
     bool on_connection_synchronized();    
     t_core& m_core;
 

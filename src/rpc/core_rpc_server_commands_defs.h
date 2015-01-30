@@ -317,6 +317,7 @@ namespace currency
       uint64_t alt_blocks_count;
       uint64_t outgoing_connections_count;
       uint64_t incoming_connections_count;
+      uint64_t synchronized_connections_count;
       uint64_t white_peerlist_size;
       uint64_t grey_peerlist_size;
       uint64_t current_blocks_median;
@@ -341,6 +342,7 @@ namespace currency
         KV_SERIALIZE(alt_blocks_count)
         KV_SERIALIZE(outgoing_connections_count)
         KV_SERIALIZE(incoming_connections_count)
+        KV_SERIALIZE(synchronized_connections_count)
         KV_SERIALIZE(white_peerlist_size)
         KV_SERIALIZE(grey_peerlist_size)
         KV_SERIALIZE(current_blocks_median)      

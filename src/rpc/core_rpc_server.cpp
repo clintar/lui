@@ -90,6 +90,7 @@ namespace currency
     uint64_t total_conn = m_p2p.get_connections_count();
     res.outgoing_connections_count = m_p2p.get_outgoing_connections_count();
     res.incoming_connections_count = total_conn - res.outgoing_connections_count;
+    res.synchronized_connections_count = m_p2p.get_payload_object().get_synchronized_connections_count();
     res.white_peerlist_size = m_p2p.get_peerlist_manager().get_white_peers_count();
     res.grey_peerlist_size = m_p2p.get_peerlist_manager().get_gray_peers_count();
     res.current_blocks_median = m_core.get_blockchain_storage().get_current_comulative_blocksize_limit()/2;

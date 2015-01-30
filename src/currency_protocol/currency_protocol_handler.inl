@@ -68,7 +68,7 @@ namespace currency
   {
     return m_core.get_stat_info(stat_inf);
   }
-  //------------------------------------------------------------------------------------------------------------------------   
+  //------------------------------------------------------------------------------------------------------------------------
   template<class t_core> 
   void t_currency_protocol_handler<t_core>::log_connections()
   {
@@ -484,11 +484,11 @@ namespace currency
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core> 
-  size_t t_currency_protocol_handler<t_core>::get_synchronizing_connections_count()
+  size_t t_currency_protocol_handler<t_core>::get_synchronized_connections_count()
   {
     size_t count = 0;
     m_p2p->for_each_connection([&](currency_connection_context& context, nodetool::peerid_type peer_id)->bool{
-      if(context.m_state == currency_connection_context::state_synchronizing)
+      if (context.m_state == currency_connection_context::state_normal)
         ++count;
       return true;
     });

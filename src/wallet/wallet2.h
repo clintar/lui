@@ -216,6 +216,8 @@ namespace tools
     void wallet_transfer_info_from_unconfirmed_transfer_details(const unconfirmed_transfer_details& utd, wallet_rpc::wallet_transfer_info& wti);
     bool is_coin_age_okay(const transfer_details& tr);
     bool build_kernel(const currency::pos_entry& pe, const currency::stake_modifier_type& stake_modifier, currency::stake_kernel& kernel, uint64_t& coindays_weight);
+    bool is_connected_to_net();
+
 
     currency::account_base m_account;
     std::string m_wallet_file;
@@ -398,6 +400,12 @@ namespace tools
   void wallet2::transfer(const std::vector<currency::tx_destination_entry>& dsts, size_t fake_outputs_count,
     uint64_t unlock_time, uint64_t fee, const std::vector<uint8_t>& extra, T destination_split_strategy, const tx_dust_policy& dust_policy, currency::transaction &tx, uint8_t tx_outs_attr)
   {
+    if (!is_connected_to_net())
+    {
+      CHECK_AND_THROW_WALLET_EX(true, error::wallet_internal_error,
+        "Transfer attempt while daemon offline");
+    }
+
     using namespace currency;
     CHECK_AND_THROW_WALLET_EX(dsts.empty(), error::zero_destination);
 

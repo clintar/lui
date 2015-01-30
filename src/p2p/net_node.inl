@@ -806,7 +806,7 @@ namespace nodetool
 
     return count;
   }
-  //-----------------------------------------------------------------------------------
+ //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::remove_dead_connections()
   {
