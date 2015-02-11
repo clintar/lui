@@ -275,7 +275,7 @@ namespace currency
     bool prune_ring_signatures(uint64_t height, uint64_t& transactions_pruned, uint64_t& signatures_pruned);
     //POS
     wide_difficulty_type get_adjusted_cumulative_difficulty_for_next_pos(wide_difficulty_type next_diff);
-    wide_difficulty_type get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain_list& alt_chain, uint64_t block_height, wide_difficulty_type next_diff);
+    wide_difficulty_type get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain_list& alt_chain, uint64_t block_height, wide_difficulty_type next_diff, uint64_t connection_height);
     uint64_t get_last_x_block_height(bool pos);
     wide_difficulty_type get_last_alt_x_block_cumulative_precise_difficulty(alt_chain_list& alt_chain, uint64_t block_height, bool pos);
     size_t get_current_sequence_factor(bool pos);

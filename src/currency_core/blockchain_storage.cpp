@@ -856,6 +856,11 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
     return false;
   }
 
+#ifdef _DEBUG
+  uint64_t h = get_block_height(b);
+#endif// _DEBUG
+
+
   TRY_ENTRY();
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
 
@@ -1028,7 +1033,7 @@ bool blockchain_storage::handle_alternative_block(const block& b, const crypto::
     bei.cumulative_diff_adjusted = alt_chain.size() ? it_prev->second.cumulative_diff_adjusted : m_blocks[it_main_prev->second].cumulative_diff_adjusted;
     
     if (pos_block)
-      cumulative_diff_delta = get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain, bei.height, current_diff);
+      cumulative_diff_delta = get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain, bei.height, current_diff, connection_height);
     else
       cumulative_diff_delta = current_diff;
 
@@ -1462,7 +1467,7 @@ size_t blockchain_storage::get_current_sequence_factor(bool pos)
     if (pos != is_pos_block(it->bl))
       break;
   }
-  return true;
+  return n;
 }
 //------------------------------------------------------------------
 size_t blockchain_storage::get_current_sequence_factor_for_alt(alt_chain_list& alt_chain, bool pos)
@@ -2181,7 +2186,7 @@ wide_difficulty_type blockchain_storage::get_adjusted_cumulative_difficulty_for_
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
   wide_difficulty_type last_pow_diff = 0;
   wide_difficulty_type last_pos_diff = 0;
-  for (auto it = m_blocks.rbegin(); it != m_blocks.rend() || !(last_pow_diff && last_pow_diff); ++it)
+  for (auto it = m_blocks.rbegin(); it != m_blocks.rend() && !(last_pow_diff && last_pos_diff); ++it)
   {
     if (is_pos_block(it->bl))
     {
@@ -2202,7 +2207,7 @@ wide_difficulty_type blockchain_storage::get_adjusted_cumulative_difficulty_for_
   return next_diff*last_pow_diff/last_pos_diff;
 }
 //------------------------------------------------------------------
-wide_difficulty_type blockchain_storage::get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain_list& alt_chain, uint64_t block_height, wide_difficulty_type next_diff)
+wide_difficulty_type blockchain_storage::get_adjusted_cumulative_difficulty_for_next_alt_pos(alt_chain_list& alt_chain, uint64_t block_height, wide_difficulty_type next_diff, uint64_t connection_height)
 {
 
   wide_difficulty_type last_pow_diff = 0;
@@ -2227,20 +2232,20 @@ wide_difficulty_type blockchain_storage::get_adjusted_cumulative_difficulty_for_
   }
 
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
-  for (auto it = m_blocks.rbegin(); it != m_blocks.rend() && !(last_pos_diff && last_pow_diff); ++it)
+  for (uint64_t h = connection_height - 1; h != 0 && !(last_pos_diff && last_pow_diff); ++h)
   {
-    if (is_pos_block(it->bl))
+    if (is_pos_block(m_blocks[h].bl))
     {
       if (!last_pos_diff)
       {
-        last_pos_diff = it->difficulty;
+        last_pos_diff = m_blocks[h].difficulty;
       }
     }
     else
     {
       if (!last_pow_diff)
       {
-        last_pow_diff = it->difficulty;
+        last_pow_diff = m_blocks[h].difficulty;
       }
     }
   }
@@ -2295,6 +2300,9 @@ bool blockchain_storage::handle_block_to_main_chain(const block& bl, const crypt
       << "expected: " << get_top_block_id());
     return false;
   }
+#ifdef _DEBUG
+  uint64_t h = get_block_height(bl);
+#endif// _DEBUG
 
   if(!check_block_timestamp_main(bl))
   {
