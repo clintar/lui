@@ -136,7 +136,7 @@ namespace currency
                                           << ",  kei_image_set.size()=" << kei_image_set.size() << ENDL << "txin.k_image=" << txin.k_image << ENDL
                                           << "tx_id=" << id );
       auto ins_res = kei_image_set.insert(id);
-      CHECK_AND_ASSERT_MES(ins_res.second, false, "internal error: try to insert duplicate iterator in key_image set");
+      CHECK_AND_ASSERT_MES(ins_res.second, false, "internal error: try to insert tx id: " << *ins_res.first << " to key_image_set");
     }
 
     tvc.m_verifivation_failed = false;
@@ -173,7 +173,6 @@ namespace currency
         //it is now empty hash container for this key_image
         m_spent_key_images.erase(it);
       }
-
     }
     return true;
   }

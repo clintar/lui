@@ -154,20 +154,14 @@ namespace tools
     template <class t_archive>
     inline void serialize(t_archive &a, const unsigned int ver)
     {
-      if(ver < 5)
+      if(ver < 9)
         return;
       a & m_blockchain;
       a & m_transfers;
       a & m_account_public_address;
       a & m_key_images;
-      if(ver < 6)
-        return;
       a & m_unconfirmed_txs;
-      if(ver < 7)
-        return;
       a & m_payments;
-      if (ver < 8)
-        return;
       a & m_transfer_history;
 
     }
@@ -242,7 +236,7 @@ namespace tools
 }
 
 
-BOOST_CLASS_VERSION(tools::wallet2, 8)
+BOOST_CLASS_VERSION(tools::wallet2, 9)
 BOOST_CLASS_VERSION(tools::wallet2::unconfirmed_transfer_details, 3)
 BOOST_CLASS_VERSION(tools::wallet_rpc::wallet_transfer_info, 3)
 

@@ -70,6 +70,11 @@ bool gen_pos_basic_tests::generate(std::vector<test_event_entry>& events) const
   MAKE_NEXT_POS_BLOCK(events, blk_33_a, blk_32_a, miner_account, coin_stake_sources);
 
   DO_CALLBACK(events, "configure_check_height2");
+  // start alternative chain
+  MAKE_NEXT_BLOCK(events, blk_33b_a, blk_32_a, miner_account);
+ 
+
+
 
 
   return true;
